@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
-import { Cairo } from "next/font/google";
+import { Cairo, Geist } from "next/font/google";
 import "./globals.css";
+import { cn } from "@/lib/utils";
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 const cairo = Cairo({
   variable: "--font-cairo",
@@ -19,7 +22,7 @@ const cairo = Cairo({
               children: React.ReactNode;
               }>) {
                 return (
-                    <html lang="ar" dir="rtl">
+                    <html lang="ar" dir="rtl" className={cn("font-sans", geist.variable)}>
                           <body className={`${cairo.variable} antialiased`}>
                                   {children}
                                         </body>
