@@ -8,20 +8,32 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleSignup(e: React.FormEvent) {
     e.preventDefault();
-    setLoading(true);
     setError(null);
 
+    if (password !== confirmPassword) {
+      setError("كلمتا المرور غير متطابقتين");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("كلمة المرور يجب أن تكون 6 أحرف على الأقل");
+      return;
+    }
+
+    setLoading(true);
+
     const supabase = createClient();
-    const { error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
     });
@@ -43,13 +55,13 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary text-primary-foreground text-xl font-bold">
             A
           </div>
-          <h1 className="text-2xl font-bold">تسجيل الدخول</h1>
+          <h1 className="text-2xl font-bold">إنشاء حساب جديد</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            أهلاً بك في ApexAcademy Cloud
+            ابدأ رحلتك مع ApexAcademy Cloud
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4 rounded-2xl border bg-card p-6">
+        <form onSubmit={handleSignup} className="space-y-4 rounded-2xl border bg-card p-6">
           <div className="space-y-2">
             <Label htmlFor="email">البريد الإلكتروني</Label>
             <Input
@@ -78,6 +90,20 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword">تأكيد كلمة المرور</Label>
+            <Input
+              id="confirmPassword"
+              type="password"
+              placeholder="••••••••"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              disabled={loading}
+              dir="ltr"
+            />
+          </div>
+
           {error && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
               {error}
@@ -85,13 +111,13 @@ export default function LoginPage() {
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "جاري تسجيل الدخول..." : "تسجيل الدخول"}
+            {loading ? "جاري إنشاء الحساب..." : "إنشاء الحساب"}
           </Button>
 
           <p className="text-center text-sm text-muted-foreground">
-            ما عندك حساب؟{" "}
-            <Link href="/signup" className="text-primary hover:underline">
-              أنشئ حساب
+            عندك حساب؟{" "}
+            <Link href="/login" className="text-primary hover:underline">
+              سجّل دخول
             </Link>
           </p>
         </form>
