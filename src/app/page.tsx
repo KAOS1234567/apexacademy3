@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -17,8 +18,12 @@ export default function Home() {
             <a href="#pricing" className="text-muted-foreground hover:text-foreground transition">الأسعار</a>
           </nav>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm">دخول</Button>
-            <Button size="sm">ابدأ الآن</Button>
+            <Link href="/login">
+              <Button variant="ghost" size="sm">دخول</Button>
+            </Link>
+            <Link href="/signup">
+              <Button size="sm">ابدأ الآن</Button>
+            </Link>
           </div>
         </div>
       </header>
@@ -38,8 +43,12 @@ export default function Home() {
             منصة متكاملة لإدارة اللاعبين، الفرق، التدريبات، المباريات، والتطوير — كل شي بمكان واحد.
           </p>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Button size="lg">ابدأ مجانًا</Button>
-            <Button size="lg" variant="outline">شاهد العرض</Button>
+            <Link href="/signup">
+              <Button size="lg">ابدأ مجانًا</Button>
+            </Link>
+            <Link href="/login">
+              <Button size="lg" variant="outline">دخول للمنصة</Button>
+            </Link>
           </div>
         </div>
       </section>
