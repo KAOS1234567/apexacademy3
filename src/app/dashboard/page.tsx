@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { Button } from "@/components/ui/button";
 
 type Academy = {
   id: string;
@@ -59,16 +58,9 @@ export default function DashboardPage() {
     load();
   }, [router]);
 
-  async function handleLogout() {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/login");
-    router.refresh();
-  }
-
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center">
+      <div className="flex h-full items-center justify-center p-10">
         <p className="text-muted-foreground">جاري التحميل...</p>
       </div>
     );
@@ -77,65 +69,44 @@ export default function DashboardPage() {
   const primary = memberships[0];
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
-              A
-            </div>
-            <span className="text-lg font-bold">Campo</span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="hidden text-sm text-muted-foreground md:inline">
-              {userEmail}
-            </span>
-            <Button variant="outline" size="sm" onClick={handleLogout}>
-              تسجيل الخروج
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div className="p-6 md:p-10">
+      <div className="mb-8">
+        <p className="text-sm text-muted-foreground">مرحبًا بك في</p>
+        <h1 className="mt-1 text-3xl font-bold">{primary.academies.name}</h1>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {primary.academies.city && primary.academies.country
+            ? `${primary.academies.city}، ${primary.academies.country}`
+            : primary.academies.country || "—"}
+          {" • "}
+          دورك: <span className="font-medium text-foreground">{primary.role}</span>
+          {" • "}
+          <span className="text-xs">{userEmail}</span>
+        </p>
+      </div>
 
-      <main className="container mx-auto px-4 py-10">
-        <div className="mb-8">
-          <p className="text-sm text-muted-foreground">مرحبًا بك في</p>
-          <h1 className="mt-1 text-3xl font-bold">
-            {primary.academies.name}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {primary.academies.city && primary.academies.country
-              ? `${primary.academies.city}، ${primary.academies.country}`
-              : primary.academies.country || "—"}
-            {" • "}
-            دورك: <span className="font-medium text-foreground">{primary.role}</span>
-          </p>
+      <div className="grid gap-6 md:grid-cols-3">
+        <div className="rounded-2xl border bg-card p-6">
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground">اللاعبين</h3>
+          <p className="text-3xl font-bold">0</p>
+          <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
         </div>
+        <div className="rounded-2xl border bg-card p-6">
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground">الفرق</h3>
+          <p className="text-3xl font-bold">0</p>
+          <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
+        </div>
+        <div className="rounded-2xl border bg-card p-6">
+          <h3 className="mb-2 text-sm font-medium text-muted-foreground">المدربين</h3>
+          <p className="text-3xl font-bold">0</p>
+          <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
+        </div>
+      </div>
 
-        <div className="grid gap-6 md:grid-cols-3">
-          <div className="rounded-2xl border bg-card p-6">
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">اللاعبين</h3>
-            <p className="text-3xl font-bold">0</p>
-            <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
-          </div>
-          <div className="rounded-2xl border bg-card p-6">
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">الفرق</h3>
-            <p className="text-3xl font-bold">0</p>
-            <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
-          </div>
-          <div className="rounded-2xl border bg-card p-6">
-            <h3 className="mb-2 text-sm font-medium text-muted-foreground">المدربين</h3>
-            <p className="text-3xl font-bold">0</p>
-            <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
-          </div>
-        </div>
-
-        <div className="mt-10 rounded-2xl border border-dashed bg-muted/30 p-8 text-center">
-          <p className="text-sm text-muted-foreground">
-            المرحلة القادمة: إدارة اللاعبين، الفرق، والتدريبات
-          </p>
-        </div>
-      </main>
+      <div className="mt-10 rounded-2xl border border-dashed bg-muted/30 p-8 text-center">
+        <p className="text-sm text-muted-foreground">
+          المرحلة القادمة: إدارة اللاعبين، الفرق، والتدريبات
+        </p>
+      </div>
     </div>
   );
 }
