@@ -120,8 +120,8 @@ export default function PlayersPage() {
             <tbody>
               {players.map((p) => (
                 <tr key={p.id} className="border-t text-sm">
-                  <td className="px-4 py-3 font-medium">
-                    {p.first_name} {p.last_name}
+                  <td className="px-4 py-3 font-medium"><Link href={`/dashboard/players/${p.id}`} className="hover:text-primary transition-colors">
+                    {p.first_name} {p.last_name}</Link>
                   </td>
                   <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                     {p.position || "—"}
