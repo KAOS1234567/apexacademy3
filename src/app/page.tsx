@@ -10,7 +10,7 @@ export default function Home() {
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
               A
             </div>
-            <span className="text-lg font-bold">ApexAcademy</span>
+            <span className="text-lg font-bold">Campo</span>
           </div>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a href="#features" className="text-muted-foreground hover:text-foreground transition">المميزات</a>
@@ -81,7 +81,7 @@ export default function Home() {
 
       <footer className="border-t py-8">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
-          © 2026 ApexAcademy Cloud — جميع الحقوق محفوظة
+          © 2026 Campo — جميع الحقوق محفوظة
         </div>
       </footer>
     </div>

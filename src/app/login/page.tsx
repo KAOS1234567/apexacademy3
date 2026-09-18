@@ -45,7 +45,7 @@ export default function LoginPage() {
           </div>
           <h1 className="text-2xl font-bold">تسجيل الدخول</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            أهلاً بك في ApexAcademy Cloud
+            أهلاً بك في Campo
           </p>
         </div>
 

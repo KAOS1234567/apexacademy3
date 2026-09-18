@@ -19,7 +19,7 @@ export default function DashboardPage() {
       <div className="text-center space-y-4">
         <h1 className="text-3xl font-bold">مرحبًا بك 👋</h1>
         <p className="text-muted-foreground">
-          أنت الآن مسجّل الدخول إلى ApexAcademy Cloud
+          أنت الآن مسجّل الدخول إلى Campo
         </p>
         <p className="text-sm text-muted-foreground">
           Dashboard قيد البناء — راح نبنيه قريبًا

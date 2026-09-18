@@ -12,7 +12,7 @@ const cairo = Cairo({
       });
 
       export const metadata: Metadata = {
-        title: "ApexAcademy Cloud",
+        title: "Campo",
           description: "Football Academy Management SaaS",
           };
 

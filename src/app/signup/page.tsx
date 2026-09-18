@@ -57,7 +57,7 @@ export default function SignupPage() {
           </div>
           <h1 className="text-2xl font-bold">إنشاء حساب جديد</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            ابدأ رحلتك مع ApexAcademy Cloud
+            ابدأ رحلتك مع Campo
           </p>
         </div>
 
