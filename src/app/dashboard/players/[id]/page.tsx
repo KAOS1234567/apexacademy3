@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { PlayerAttendance } from "@/components/features/PlayerAttendance";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Trash2, Save } from "lucide-react";
@@ -319,6 +320,11 @@ export default function PlayerDetailPage() {
             </Link>
           </div>
         </form>
+
+        <div className="mt-10 space-y-4">
+          <h2 className="text-lg font-bold">سجل الحضور</h2>
+          <PlayerAttendance playerId={id} />
+        </div>
       </div>
     </div>
   );
