@@ -78,10 +78,18 @@ export default function SettingsPage() {
 
       const { data: mData } = await supabase
         .from("academy_members")
-        .select("id, user_id, role, created_at, profiles(full_name, avatar_url)")
+        .select("id, user_id, role, created_at")
         .eq("academy_id", ac.id)
         .order("created_at");
-      setMembers((mData as unknown) as Member[] || []);
+      const mList = ((mData as unknown) as Member[]) || [];
+      if (mList.length > 0) {
+        const userIds = mList.map((x) => x.user_id);
+        const { data: profs } = await supabase.from("profiles").select("id, full_name, avatar_url").in("id", userIds);
+        const profMap: Record<string, { full_name: string | null; avatar_url: string | null }> = {};
+        (profs || []).forEach((pr: { id: string; full_name: string | null; avatar_url: string | null }) => { profMap[pr.id] = { full_name: pr.full_name, avatar_url: pr.avatar_url }; });
+        mList.forEach((x) => { x.profiles = profMap[x.user_id] || null; });
+      }
+      setMembers(mList);
 
       setLoading(false);
     }
