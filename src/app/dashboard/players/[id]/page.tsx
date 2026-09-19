@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowRight, Trash2, Save, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PlayerAttendance } from "@/components/features/PlayerAttendance";
+import { PlayerMatchStats } from "@/components/features/PlayerMatchStats";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -306,6 +307,11 @@ export default function PlayerDetailPage() {
         <div className="mt-10 space-y-4">
           <h2 className="text-lg font-bold">سجل الحضور</h2>
           <PlayerAttendance playerId={id} />
+        </div>
+
+        <div className="mt-10 space-y-4">
+          <h2 className="text-lg font-bold">إحصائيات المباريات</h2>
+          <PlayerMatchStats playerId={id} />
         </div>
       </div>
     </div>
