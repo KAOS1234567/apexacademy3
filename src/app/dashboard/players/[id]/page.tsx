@@ -1,20 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PlayerAttendance } from "@/components/features/PlayerAttendance";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight, Trash2, Save } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { PlayerAttendance } from "@/components/features/PlayerAttendance";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const POSITIONS = [
-  "حارس مرمى", "قلب دفاع", "ظهير أيمن", "ظهير أيسر",
-  "وسط مدافع", "وسط", "وسط هجومي",
-  "جناح أيمن", "جناح أيسر", "مهاجم",
-];
+const POSITIONS = ["حارس مرمى", "قلب دفاع", "ظهير أيمن", "ظهير أيسر", "وسط مدافع", "وسط", "وسط هجومي", "جناح أيمن", "جناح أيسر", "مهاجم"];
 
 type Player = {
   id: string;
@@ -26,7 +22,10 @@ type Player = {
   preferred_foot: string | null;
   jersey_number: number | null;
   status: string;
+  team_id: string | null;
 };
+
+type Team = { id: string; name: string };
 
 export default function PlayerDetailPage() {
   const router = useRouter();
@@ -38,6 +37,7 @@ export default function PlayerDetailPage() {
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [player, setPlayer] = useState<Player | null>(null);
+  const [teams, setTeams] = useState<Team[]>([]);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -47,21 +47,14 @@ export default function PlayerDetailPage() {
   const [preferredFoot, setPreferredFoot] = useState("");
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [status, setStatus] = useState("active");
+  const [teamId, setTeamId] = useState("");
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data, error } = await supabase
-        .from("players")
-        .select("*")
-        .eq("id", id)
-        .single();
+      const { data, error } = await supabase.from("players").select("*").eq("id", id).single();
 
-      if (error || !data) {
-        setError("اللاعب غير موجود");
-        setLoading(false);
-        return;
-      }
+      if (error || !data) { setError("اللاعب غير موجود"); setLoading(false); return; }
 
       const p = data as Player;
       setPlayer(p);
@@ -73,9 +66,31 @@ export default function PlayerDetailPage() {
       setPreferredFoot(p.preferred_foot || "");
       setJerseyNumber(p.jersey_number?.toString() || "");
       setStatus(p.status);
+      setTeamId(p.team_id || "");
+
+      if (p.team_id) {
+        // جيب teams نفس الأكاديمية
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
+          if (members && members.length > 0) {
+            const { data: t } = await supabase.from("teams").select("id, name").eq("academy_id", members[0].academy_id);
+            setTeams(t || []);
+          }
+        }
+      } else {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
+          if (members && members.length > 0) {
+            const { data: t } = await supabase.from("teams").select("id, name").eq("academy_id", members[0].academy_id);
+            setTeams(t || []);
+          }
+        }
+      }
+
       setLoading(false);
     }
-
     if (id) load();
   }, [id]);
 
@@ -85,64 +100,44 @@ export default function PlayerDetailPage() {
     setSaving(true);
 
     const supabase = createClient();
-    const { error } = await supabase
-      .from("players")
-      .update({
-        first_name: firstName.trim(),
-        last_name: lastName.trim(),
-        date_of_birth: dateOfBirth || null,
-        nationality: nationality.trim() || null,
-        position: position || null,
-        preferred_foot: preferredFoot || null,
-        jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
-        status,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
+    const { error } = await supabase.from("players").update({
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
+      date_of_birth: dateOfBirth || null,
+      nationality: nationality.trim() || null,
+      position: position || null,
+      preferred_foot: preferredFoot || null,
+      jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
+      status,
+      team_id: teamId || null,
+      updated_at: new Date().toISOString(),
+    }).eq("id", id);
 
-    if (error) {
-      setError(error.message);
-      setSaving(false);
-      return;
-    }
-
+    if (error) { setError(error.message); setSaving(false); return; }
     setSaving(false);
     router.push("/dashboard/players");
     router.refresh();
   }
 
   async function handleDelete() {
-    if (!confirm("هل أنت متأكد من حذف هذا اللاعب؟ لا يمكن التراجع.")) return;
-
+    if (!confirm("هل أنت متأكد من حذف هذا اللاعب؟")) return;
     setDeleting(true);
     const supabase = createClient();
     const { error } = await supabase.from("players").delete().eq("id", id);
-
-    if (error) {
-      setError(error.message);
-      setDeleting(false);
-      return;
-    }
-
+    if (error) { setError(error.message); setDeleting(false); return; }
     router.push("/dashboard/players");
     router.refresh();
   }
 
   if (loading) {
-    return (
-      <div className="flex h-full items-center justify-center p-10">
-        <p className="text-muted-foreground">جاري التحميل...</p>
-      </div>
-    );
+    return <div className="flex h-full items-center justify-center p-10"><p className="text-muted-foreground">جاري التحميل...</p></div>;
   }
 
   if (!player) {
     return (
       <div className="p-10 text-center">
         <p className="text-muted-foreground">اللاعب غير موجود</p>
-        <Link href="/dashboard/players" className="mt-4 inline-block">
-          <Button variant="outline">رجوع</Button>
-        </Link>
+        <Link href="/dashboard/players" className="mt-4 inline-block"><Button variant="outline">رجوع</Button></Link>
       </div>
     );
   }
@@ -150,30 +145,18 @@ export default function PlayerDetailPage() {
   return (
     <div className="p-6 md:p-10">
       <div className="mx-auto max-w-2xl">
-        <Link
-          href="/dashboard/players"
-          className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowRight className="h-4 w-4" />
-          رجوع للاعبين
+        <Link href="/dashboard/players" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+          <ArrowRight className="h-4 w-4" />رجوع للاعبين
         </Link>
 
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold">
-              {player.first_name} {player.last_name}
-            </h1>
+            <h1 className="text-2xl font-bold">{player.first_name} {player.last_name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {player.position || "بدون مركز"} • {player.status}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
+          <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
             <Trash2 className="h-4 w-4" />
             {deleting ? "جاري الحذف..." : "حذف"}
           </Button>
@@ -181,87 +164,37 @@ export default function PlayerDetailPage() {
 
         <form onSubmit={handleSave} className="space-y-6">
           <div className="space-y-4 rounded-2xl border bg-card p-6">
-            <h2 className="text-sm font-semibold text-muted-foreground">
-              المعلومات الأساسية
-            </h2>
-
+            <h2 className="text-sm font-semibold text-muted-foreground">المعلومات الأساسية</h2>
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="firstName">الاسم الأول</Label>
-                <Input
-                  id="firstName"
-                  value={firstName}
-                  onChange={(e) => setFirstName(e.target.value)}
-                  required
-                  disabled={saving}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="lastName">اسم العائلة</Label>
-                <Input
-                  id="lastName"
-                  value={lastName}
-                  onChange={(e) => setLastName(e.target.value)}
-                  required
-                  disabled={saving}
-                />
-              </div>
+              <div className="space-y-2"><Label htmlFor="firstName">الاسم الأول</Label><Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} required disabled={saving} /></div>
+              <div className="space-y-2"><Label htmlFor="lastName">اسم العائلة</Label><Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} required disabled={saving} /></div>
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="dob">تاريخ الميلاد</Label>
-                <Input
-                  id="dob"
-                  type="date"
-                  value={dateOfBirth}
-                  onChange={(e) => setDateOfBirth(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="nationality">الجنسية</Label>
-                <Input
-                  id="nationality"
-                  value={nationality}
-                  onChange={(e) => setNationality(e.target.value)}
-                  disabled={saving}
-                />
-              </div>
+              <div className="space-y-2"><Label htmlFor="dob">تاريخ الميلاد</Label><Input id="dob" type="date" value={dateOfBirth} onChange={(e) => setDateOfBirth(e.target.value)} disabled={saving} /></div>
+              <div className="space-y-2"><Label htmlFor="nationality">الجنسية</Label><Input id="nationality" value={nationality} onChange={(e) => setNationality(e.target.value)} disabled={saving} /></div>
             </div>
           </div>
 
           <div className="space-y-4 rounded-2xl border bg-card p-6">
-            <h2 className="text-sm font-semibold text-muted-foreground">
-              المعلومات الكروية
-            </h2>
-
+            <h2 className="text-sm font-semibold text-muted-foreground">المعلومات الكروية</h2>
+            <div className="space-y-2">
+              <Label htmlFor="team">الفريق</Label>
+              <select id="team" value={teamId} onChange={(e) => setTeamId(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
+                <option value="">بدون فريق</option>
+                {teams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+              </select>
+            </div>
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="position">المركز</Label>
-                <select
-                  id="position"
-                  value={position}
-                  onChange={(e) => setPosition(e.target.value)}
-                  disabled={saving}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
+                <select id="position" value={position} onChange={(e) => setPosition(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                   <option value="">اختر المركز</option>
-                  {POSITIONS.map((p) => (
-                    <option key={p} value={p}>{p}</option>
-                  ))}
+                  {POSITIONS.map((p) => (<option key={p} value={p}>{p}</option>))}
                 </select>
               </div>
-
               <div className="space-y-2">
                 <Label htmlFor="foot">القدم المفضلة</Label>
-                <select
-                  id="foot"
-                  value={preferredFoot}
-                  onChange={(e) => setPreferredFoot(e.target.value)}
-                  disabled={saving}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
+                <select id="foot" value={preferredFoot} onChange={(e) => setPreferredFoot(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                   <option value="">غير محدد</option>
                   <option value="right">يمنى</option>
                   <option value="left">يسرى</option>
@@ -269,31 +202,11 @@ export default function PlayerDetailPage() {
                 </select>
               </div>
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="jersey">رقم القميص</Label>
-                <Input
-                  id="jersey"
-                  type="number"
-                  min="1"
-                  max="99"
-                  value={jerseyNumber}
-                  onChange={(e) => setJerseyNumber(e.target.value)}
-                  disabled={saving}
-                  dir="ltr"
-                />
-              </div>
-
+              <div className="space-y-2"><Label htmlFor="jersey">رقم القميص</Label><Input id="jersey" type="number" min="1" max="99" value={jerseyNumber} onChange={(e) => setJerseyNumber(e.target.value)} disabled={saving} dir="ltr" /></div>
               <div className="space-y-2">
                 <Label htmlFor="status">الحالة</Label>
-                <select
-                  id="status"
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  disabled={saving}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
+                <select id="status" value={status} onChange={(e) => setStatus(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                   <option value="active">نشط</option>
                   <option value="inactive">غير نشط</option>
                   <option value="trial">تجريبي</option>
@@ -302,22 +215,11 @@ export default function PlayerDetailPage() {
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+          {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={saving}>
-              <Save className="h-4 w-4" />
-              {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
-            </Button>
-            <Link href="/dashboard/players">
-              <Button type="button" variant="outline" disabled={saving}>
-                إلغاء
-              </Button>
-            </Link>
+            <Button type="submit" disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</Button>
+            <Link href="/dashboard/players"><Button type="button" variant="outline" disabled={saving}>إلغاء</Button></Link>
           </div>
         </form>
 
