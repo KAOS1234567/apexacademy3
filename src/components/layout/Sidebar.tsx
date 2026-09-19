@@ -58,7 +58,7 @@ export function Sidebar({
       >
         <div className="flex h-16 items-center justify-between border-b px-5">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground font-bold">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold">
               A
             </div>
             <span className="text-lg font-bold">Campo</span>
