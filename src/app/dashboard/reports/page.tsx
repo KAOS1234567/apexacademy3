@@ -10,6 +10,7 @@ import { ReportDocument } from "@/components/features/ReportDocument";
 
 type Counts = { players: number; teams: number; staff: number; sessions: number; matches: number; attendance: number };
 type TopPlayer = { id: string; first_name: string; last_name: string; jersey_number: number | null; position: string | null; attendance_pct: number; appearances: number };
+type TopScorer = { id: string; first_name: string; last_name: string; jersey_number: number | null; team: string | null; goals: number; assists: number };
 type TeamStat = { id: string; name: string; category: string | null };
 
 function toCSV(rows: Record<string, unknown>[], cols: { key: string; label: string }[]): string {
@@ -41,6 +42,7 @@ export default function ReportsPage() {
   const [academyName, setAcademyName] = useState("");
   const [counts, setCounts] = useState<Counts>({ players: 0, teams: 0, staff: 0, sessions: 0, matches: 0, attendance: 0 });
   const [topPlayers, setTopPlayers] = useState<TopPlayer[]>([]);
+  const [topScorers, setTopScorers] = useState<TopScorer[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStat[]>([]);
   const [exporting, setExporting] = useState(false);
 
@@ -62,15 +64,16 @@ export default function ReportsPage() {
       setAcademyId(aid);
       setAcademyName((members[0] as unknown as { academies: { name: string } }).academies?.name || "");
 
-      const [p, t, s, ss, mm, att, players, teams] = await Promise.all([
+      const [p, t, s, ss, mm, att, players, teams, allEvents] = await Promise.all([
         supabase.from("players").select("*", { count: "exact", head: true }).eq("academy_id", aid),
         supabase.from("teams").select("*", { count: "exact", head: true }).eq("academy_id", aid),
         supabase.from("staff").select("*", { count: "exact", head: true }).eq("academy_id", aid),
         supabase.from("training_sessions").select("*", { count: "exact", head: true }).eq("academy_id", aid),
         supabase.from("matches").select("*", { count: "exact", head: true }).eq("academy_id", aid),
         supabase.from("attendance").select("*", { count: "exact", head: true }),
-        supabase.from("players").select("id, first_name, last_name, jersey_number, position").eq("academy_id", aid).eq("status", "active"),
+        supabase.from("players").select("id, first_name, last_name, jersey_number, position, team_id").eq("academy_id", aid).eq("status", "active"),
         supabase.from("teams").select("id, name, category").eq("academy_id", aid),
+        supabase.from("match_events").select("player_id, event_type, matches!inner(academy_id)").eq("matches.academy_id", aid),
       ]);
 
       setCounts({
@@ -82,6 +85,7 @@ export default function ReportsPage() {
       const allTeams = teams.data || [];
       const playerIds = allPlayers.map((x) => x.id);
 
+      // attendance stats
       const abp: Record<string, { present: number; total: number }> = {};
       if (playerIds.length > 0) {
         const { data: attData } = await supabase.from("attendance").select("player_id, status").in("player_id", playerIds);
@@ -102,6 +106,33 @@ export default function ReportsPage() {
         .sort((a, b) => b.attendance_pct - a.attendance_pct)
         .slice(0, 5);
       setTopPlayers(ranked);
+
+      // top scorers
+      const teamMap: Record<string, string> = {};
+      allTeams.forEach((t) => { teamMap[t.id] = t.name; });
+
+      const goalCount: Record<string, number> = {};
+      const assistCount: Record<string, number> = {};
+      (allEvents.data || []).forEach((e: { player_id: string; event_type: string }) => {
+        if (e.event_type === "goal") goalCount[e.player_id] = (goalCount[e.player_id] || 0) + 1;
+        if (e.event_type === "assist") assistCount[e.player_id] = (assistCount[e.player_id] || 0) + 1;
+      });
+
+      const scorers = allPlayers
+        .map((pl) => ({
+          id: pl.id,
+          first_name: pl.first_name,
+          last_name: pl.last_name,
+          jersey_number: pl.jersey_number,
+          team: pl.team_id ? teamMap[pl.team_id] || null : null,
+          goals: goalCount[pl.id] || 0,
+          assists: assistCount[pl.id] || 0,
+        }))
+        .filter((x) => x.goals > 0 || x.assists > 0)
+        .sort((a, b) => b.goals - a.goals || b.assists - a.assists)
+        .slice(0, 10);
+      setTopScorers(scorers);
+
       setTeamStats(allTeams.map((x) => ({ id: x.id, name: x.name, category: x.category })));
       setLoading(false);
     }
@@ -151,50 +182,6 @@ export default function ReportsPage() {
     setExporting(false);
   }
 
-  async function exportPDF() {
-    try {
-      const el = document.getElementById("report-document-hidden");
-      if (!el) { setPdfLoading(false); return; }
-
-      const html2canvas = (await import("html2canvas-pro")).default;
-      const jsPDF = (await import("jspdf")).default;
-
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        backgroundColor: "#ffffff",
-        useCORS: true,
-        logging: false,
-        windowWidth: 900,
-      });
-
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const imgW = pageW - 16;
-      const imgH = (canvas.height * imgW) / canvas.width;
-
-      let heightLeft = imgH;
-      let position = 8;
-
-      pdf.addImage(imgData, "PNG", 8, position, imgW, imgH);
-      heightLeft -= pageH - 16;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgH + 8;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 8, position, imgW, imgH);
-        heightLeft -= pageH - 16;
-      }
-
-      pdf.save(`campo-report-${new Date().toISOString().slice(0, 10)}.pdf`);
-    } catch (e) {
-      console.error(e);
-      alert("فشل إنشاء PDF");
-    }
-    setPdfLoading(false);
-  }
-
   if (loading) {
     return <div className="flex h-full items-center justify-center p-10"><p className="text-sm text-muted-foreground">···</p></div>;
   }
@@ -226,7 +213,7 @@ export default function ReportsPage() {
           </Button>
           <Button size="sm" onClick={() => window.print()}>
             <FileText className="h-4 w-4" />
-            "تصدير PDF"
+            تصدير PDF
           </Button>
         </div>
       </div>
@@ -243,6 +230,51 @@ export default function ReportsPage() {
         </div>
       </section>
 
+      {/* Top Scorers */}
+      <section className="mb-10">
+        <h2 className="mb-4 text-xs font-mono uppercase tracking-widest text-muted-foreground">TOP SCORERS</h2>
+        {topScorers.length === 0 ? (
+          <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
+            <p className="text-sm text-muted-foreground">لا يوجد أهداف أو صناعة بعد</p>
+          </div>
+        ) : (
+          <div className="rounded-2xl border bg-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40">
+                <tr className="text-right text-xs text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">#</th>
+                  <th className="px-4 py-3 font-medium">اللاعب</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-medium">الفريق</th>
+                  <th className="px-4 py-3 font-medium text-center">⚽ أهداف</th>
+                  <th className="px-4 py-3 font-medium text-center">🅰️ صناعة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topScorers.map((p, i) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="px-4 py-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, "0")}</td>
+                    <td className="px-4 py-3">
+                      <Link href={`/dashboard/players/${p.id}`} className="font-medium hover:text-accent">
+                        {p.jersey_number != null && <span className="font-mono text-muted-foreground ml-1">#{p.jersey_number}</span>}
+                        {" "}{p.first_name} {p.last_name}
+                      </Link>
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground text-xs">{p.team || "—"}</td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-mono text-base font-bold text-emerald-500">{p.goals}</span>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-mono text-base font-bold text-blue-500">{p.assists}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      {/* Top Attendance */}
       <section className="mb-10">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TOP ATTENDANCE</h2>
@@ -268,7 +300,9 @@ export default function ReportsPage() {
                 {topPlayers.map((p, i) => (
                   <tr key={p.id} className="border-t">
                     <td className="px-4 py-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, "0")}</td>
-                    <td className="px-4 py-3"><Link href={`/dashboard/players/${p.id}`} className="font-medium hover:text-accent">{p.first_name} {p.last_name}</Link></td>
+                    <td className="px-4 py-3">
+                      <Link href={`/dashboard/players/${p.id}`} className="font-medium hover:text-accent">{p.first_name} {p.last_name}</Link>
+                    </td>
                     <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">{p.position || "—"}</td>
                     <td className="px-4 py-3 text-center">
                       <div className="flex items-center gap-2 justify-center">
@@ -308,7 +342,7 @@ export default function ReportsPage() {
         )}
       </section>
 
-      {/* التقرير المخفي للـPDF */}
+      {/* Hidden PDF document */}
       <div
         id="report-document-hidden"
         style={{
