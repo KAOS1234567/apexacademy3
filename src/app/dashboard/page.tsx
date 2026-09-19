@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { Users, Shield, Dumbbell, Calendar, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 type Academy = {
@@ -17,41 +19,70 @@ type Membership = {
   academies: Academy;
 };
 
+type Counts = {
+  players: number;
+  teams: number;
+  staff: number;
+  sessions: number;
+  matches: number;
+};
+
 export default function DashboardPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [memberships, setMemberships] = useState<Membership[]>([]);
+  const [primary, setPrimary] = useState<Membership | null>(null);
+  const [counts, setCounts] = useState<Counts>({
+    players: 0, teams: 0, staff: 0, sessions: 0, matches: 0,
+  });
+  const [upcoming, setUpcoming] = useState<{ sessions: number; matches: number }>({ sessions: 0, matches: 0 });
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) { router.push("/login"); return; }
 
       setUserEmail(user.email ?? null);
 
-      const { data, error } = await supabase
+      const { data: members } = await supabase
         .from("academy_members")
         .select("role, academies(id, name, country, city, currency)")
         .eq("user_id", user.id);
 
-      if (error) {
-        console.error(error);
-        setLoading(false);
-        return;
-      }
+      if (!members || members.length === 0) { router.push("/onboarding"); return; }
 
-      if (!data || data.length === 0) {
-        router.push("/onboarding");
-        return;
-      }
+      const m = members[0] as unknown as Membership;
+      setPrimary(m);
+      const aid = m.academies.id;
 
-      setMemberships(data as unknown as Membership[]);
+      const [players, teams, staff, sessions, matches] = await Promise.all([
+        supabase.from("players").select("*", { count: "exact", head: true }).eq("academy_id", aid),
+        supabase.from("teams").select("*", { count: "exact", head: true }).eq("academy_id", aid),
+        supabase.from("staff").select("*", { count: "exact", head: true }).eq("academy_id", aid),
+        supabase.from("training_sessions").select("*", { count: "exact", head: true }).eq("academy_id", aid),
+        supabase.from("matches").select("*", { count: "exact", head: true }).eq("academy_id", aid),
+      ]);
+
+      setCounts({
+        players: players.count || 0,
+        teams: teams.count || 0,
+        staff: staff.count || 0,
+        sessions: sessions.count || 0,
+        matches: matches.count || 0,
+      });
+
+      const today = new Date().toISOString().split("T")[0];
+      const [futureSessions, futureMatches] = await Promise.all([
+        supabase.from("training_sessions").select("*", { count: "exact", head: true }).eq("academy_id", aid).gte("session_date", today),
+        supabase.from("matches").select("*", { count: "exact", head: true }).eq("academy_id", aid).gte("match_date", today),
+      ]);
+
+      setUpcoming({
+        sessions: futureSessions.count || 0,
+        matches: futureMatches.count || 0,
+      });
+
       setLoading(false);
     }
 
@@ -66,7 +97,15 @@ export default function DashboardPage() {
     );
   }
 
-  const primary = memberships[0];
+  if (!primary) return null;
+
+  const cards = [
+    { label: "اللاعبين", value: counts.players, icon: Users, href: "/dashboard/players" },
+    { label: "الفرق", value: counts.teams, icon: Shield, href: "/dashboard/teams" },
+    { label: "المدربين", value: counts.staff, icon: Dumbbell, href: "/dashboard/staff" },
+    { label: "الجلسات", value: counts.sessions, icon: Calendar, href: "/dashboard/schedule" },
+    { label: "المباريات", value: counts.matches, icon: Trophy, href: "/dashboard/matches" },
+  ];
 
   return (
     <div className="p-6 md:p-10">
@@ -79,33 +118,47 @@ export default function DashboardPage() {
             : primary.academies.country || "—"}
           {" • "}
           دورك: <span className="font-medium text-foreground">{primary.role}</span>
-          {" • "}
-          <span className="text-xs">{userEmail}</span>
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="rounded-2xl border bg-card p-6">
-          <h3 className="mb-2 text-sm font-medium text-muted-foreground">اللاعبين</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
-        </div>
-        <div className="rounded-2xl border bg-card p-6">
-          <h3 className="mb-2 text-sm font-medium text-muted-foreground">الفرق</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
-        </div>
-        <div className="rounded-2xl border bg-card p-6">
-          <h3 className="mb-2 text-sm font-medium text-muted-foreground">المدربين</h3>
-          <p className="text-3xl font-bold">0</p>
-          <p className="mt-1 text-xs text-muted-foreground">قيد البناء</p>
-        </div>
+      <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-5">
+        {cards.map((c) => {
+          const Icon = c.icon;
+          return (
+            <Link
+              key={c.label}
+              href={c.href}
+              className="rounded-2xl border bg-card p-5 transition hover:border-primary/50"
+            >
+              <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg bg-primary/15">
+                <Icon className="h-4 w-4 text-primary" />
+              </div>
+              <p className="text-xs text-muted-foreground">{c.label}</p>
+              <p className="mt-1 text-2xl font-bold">{c.value}</p>
+            </Link>
+          );
+        })}
       </div>
 
-      <div className="mt-10 rounded-2xl border border-dashed bg-muted/30 p-8 text-center">
-        <p className="text-sm text-muted-foreground">
-          المرحلة القادمة: إدارة اللاعبين، الفرق، والتدريبات
-        </p>
+      <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <Link href="/dashboard/schedule" className="rounded-2xl border bg-card p-6 transition hover:border-primary/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">جلسات تدريب قادمة</p>
+              <p className="mt-1 text-3xl font-bold">{upcoming.sessions}</p>
+            </div>
+            <Calendar className="h-8 w-8 text-primary/40" />
+          </div>
+        </Link>
+        <Link href="/dashboard/matches" className="rounded-2xl border bg-card p-6 transition hover:border-primary/50">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm text-muted-foreground">مباريات قادمة</p>
+              <p className="mt-1 text-3xl font-bold">{upcoming.matches}</p>
+            </div>
+            <Trophy className="h-8 w-8 text-primary/40" />
+          </div>
+        </Link>
       </div>
     </div>
   );
