@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Download, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
-import { exportElementAsPDF } from "@/lib/pdf";
+import { ReportDocument } from "@/components/features/ReportDocument";
 
 type Counts = { players: number; teams: number; staff: number; sessions: number; matches: number; attendance: number };
 type TopPlayer = { id: string; first_name: string; last_name: string; jersey_number: number | null; position: string | null; attendance_pct: number; appearances: number };
@@ -43,7 +43,6 @@ export default function ReportsPage() {
   const [topPlayers, setTopPlayers] = useState<TopPlayer[]>([]);
   const [teamStats, setTeamStats] = useState<TeamStat[]>([]);
   const [exporting, setExporting] = useState(false);
-  const [pdfLoading, setPdfLoading] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -153,9 +152,42 @@ export default function ReportsPage() {
   }
 
   async function exportPDF() {
-    setPdfLoading(true);
     try {
-      await exportElementAsPDF("report-content", `campo-report-${new Date().toISOString().slice(0, 10)}.pdf`);
+      const el = document.getElementById("report-document-hidden");
+      if (!el) { setPdfLoading(false); return; }
+
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const jsPDF = (await import("jspdf")).default;
+
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        backgroundColor: "#ffffff",
+        useCORS: true,
+        logging: false,
+        windowWidth: 900,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const imgW = pageW - 16;
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      let heightLeft = imgH;
+      let position = 8;
+
+      pdf.addImage(imgData, "PNG", 8, position, imgW, imgH);
+      heightLeft -= pageH - 16;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgH + 8;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", 8, position, imgW, imgH);
+        heightLeft -= pageH - 16;
+      }
+
+      pdf.save(`campo-report-${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (e) {
       console.error(e);
       alert("فشل إنشاء PDF");
@@ -184,100 +216,112 @@ export default function ReportsPage() {
           <p className="mt-1 text-sm text-muted-foreground">نظرة شاملة على {academyName || "الأكاديمية"}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" onClick={exportPlayers} disabled={exporting || pdfLoading}>
+          <Button variant="outline" size="sm" onClick={exportPlayers} disabled={exporting}>
             <Download className="h-4 w-4" />
             CSV اللاعبين
           </Button>
-          <Button variant="outline" size="sm" onClick={exportAttendance} disabled={exporting || pdfLoading}>
+          <Button variant="outline" size="sm" onClick={exportAttendance} disabled={exporting}>
             <Download className="h-4 w-4" />
             CSV الحضور
           </Button>
-          <Button size="sm" onClick={exportPDF} disabled={pdfLoading}>
+          <Button size="sm" onClick={() => window.print()}>
             <FileText className="h-4 w-4" />
-            {pdfLoading ? "جاري..." : "تصدير PDF"}
+            "تصدير PDF"
           </Button>
         </div>
       </div>
 
-      <div id="report-content" className="bg-background p-2 rounded-lg">
-        <section className="mb-10">
-          <h2 className="mb-4 text-xs font-mono uppercase tracking-widest text-muted-foreground">OVERVIEW</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-            {cards.map((c) => (
-              <div key={c.label} className="rounded-xl border bg-card p-4">
-                <p className="text-xs text-muted-foreground">{c.label}</p>
-                <p className="mt-2 font-mono text-3xl font-light">{String(c.value).padStart(2, "0")}</p>
-              </div>
+      <section className="mb-10">
+        <h2 className="mb-4 text-xs font-mono uppercase tracking-widest text-muted-foreground">OVERVIEW</h2>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          {cards.map((c) => (
+            <div key={c.label} className="rounded-xl border bg-card p-4">
+              <p className="text-xs text-muted-foreground">{c.label}</p>
+              <p className="mt-2 font-mono text-3xl font-light">{String(c.value).padStart(2, "0")}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-10">
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TOP ATTENDANCE</h2>
+          <Link href="/dashboard/players" className="text-xs text-accent hover:underline">كل اللاعبين ←</Link>
+        </div>
+        {topPlayers.length === 0 ? (
+          <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
+            <p className="text-sm text-muted-foreground">لا يوجد سجلات حضور بعد</p>
+          </div>
+        ) : (
+          <div className="rounded-2xl border bg-card overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/40">
+                <tr className="text-right text-xs text-muted-foreground">
+                  <th className="px-4 py-3 font-medium">#</th>
+                  <th className="px-4 py-3 font-medium">اللاعب</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-medium">المركز</th>
+                  <th className="px-4 py-3 font-medium text-center">الحضور</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-medium text-center">الجلسات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topPlayers.map((p, i) => (
+                  <tr key={p.id} className="border-t">
+                    <td className="px-4 py-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, "0")}</td>
+                    <td className="px-4 py-3"><Link href={`/dashboard/players/${p.id}`} className="font-medium hover:text-accent">{p.first_name} {p.last_name}</Link></td>
+                    <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">{p.position || "—"}</td>
+                    <td className="px-4 py-3 text-center">
+                      <div className="flex items-center gap-2 justify-center">
+                        <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
+                          <div className="h-full bg-primary" style={{ width: `${p.attendance_pct}%` }} />
+                        </div>
+                        <span className="font-mono text-xs w-9 text-left">{p.attendance_pct}%</span>
+                      </div>
+                    </td>
+                    <td className="hidden md:table-cell px-4 py-3 text-center text-muted-foreground font-mono">{p.appearances}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
+      <section>
+        <div className="flex items-baseline justify-between mb-4">
+          <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TEAMS</h2>
+          <Link href="/dashboard/teams" className="text-xs text-accent hover:underline">كل الفرق ←</Link>
+        </div>
+        {teamStats.length === 0 ? (
+          <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
+            <p className="text-sm text-muted-foreground">لا يوجد فرق بعد</p>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {teamStats.map((t) => (
+              <Link key={t.id} href={`/dashboard/teams/${t.id}`} className="rounded-xl border bg-card p-4 hover:border-primary/50 transition-colors">
+                <p className="font-medium">{t.name}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t.category || "بدون فئة"}</p>
+              </Link>
             ))}
           </div>
-        </section>
+        )}
+      </section>
 
-        <section className="mb-10">
-          <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TOP ATTENDANCE</h2>
-            <Link href="/dashboard/players" className="text-xs text-accent hover:underline">كل اللاعبين ←</Link>
-          </div>
-          {topPlayers.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
-              <p className="text-sm text-muted-foreground">لا يوجد سجلات حضور بعد</p>
-            </div>
-          ) : (
-            <div className="rounded-2xl border bg-card overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/40">
-                  <tr className="text-right text-xs text-muted-foreground">
-                    <th className="px-4 py-3 font-medium">#</th>
-                    <th className="px-4 py-3 font-medium">اللاعب</th>
-                    <th className="hidden md:table-cell px-4 py-3 font-medium">المركز</th>
-                    <th className="px-4 py-3 font-medium text-center">الحضور</th>
-                    <th className="hidden md:table-cell px-4 py-3 font-medium text-center">الجلسات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {topPlayers.map((p, i) => (
-                    <tr key={p.id} className="border-t">
-                      <td className="px-4 py-3 font-mono text-muted-foreground">{String(i + 1).padStart(2, "0")}</td>
-                      <td className="px-4 py-3">
-                        <Link href={`/dashboard/players/${p.id}`} className="font-medium hover:text-accent">{p.first_name} {p.last_name}</Link>
-                      </td>
-                      <td className="hidden md:table-cell px-4 py-3 text-muted-foreground">{p.position || "—"}</td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <div className="h-1.5 w-16 bg-muted rounded-full overflow-hidden">
-                            <div className="h-full bg-primary" style={{ width: `${p.attendance_pct}%` }} />
-                          </div>
-                          <span className="font-mono text-xs w-9 text-left">{p.attendance_pct}%</span>
-                        </div>
-                      </td>
-                      <td className="hidden md:table-cell px-4 py-3 text-center text-muted-foreground font-mono">{p.appearances}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section>
-          <div className="flex items-baseline justify-between mb-4">
-            <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TEAMS</h2>
-            <Link href="/dashboard/teams" className="text-xs text-accent hover:underline">كل الفرق ←</Link>
-          </div>
-          {teamStats.length === 0 ? (
-            <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
-              <p className="text-sm text-muted-foreground">لا يوجد فرق بعد</p>
-            </div>
-          ) : (
-            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-              {teamStats.map((t) => (
-                <Link key={t.id} href={`/dashboard/teams/${t.id}`} className="rounded-xl border bg-card p-4 hover:border-primary/50 transition-colors">
-                  <p className="font-medium">{t.name}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{t.category || "بدون فئة"}</p>
-                </Link>
-              ))}
-            </div>
-          )}
-        </section>
+      {/* التقرير المخفي للـPDF */}
+      <div
+        id="report-document-hidden"
+        style={{
+          position: "fixed",
+          left: "-99999px",
+          top: 0,
+          width: "900px",
+          background: "#ffffff",
+          pointerEvents: "none",
+        }}
+        aria-hidden="true"
+      >
+        <ReportDocument />
       </div>
     </div>
   );
