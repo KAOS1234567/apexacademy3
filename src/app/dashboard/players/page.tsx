@@ -14,23 +14,20 @@ type Player = {
   position: string | null;
   jersey_number: number | null;
   status: string;
+  team_id: string | null;
+  teams: { name: string } | null;
 };
 
 export default function PlayersPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [players, setPlayers] = useState<Player[]>([]);
-  const [academyId, setAcademyId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        router.push("/login");
-        return;
-      }
+      if (!user) { router.push("/login"); return; }
 
       const { data: members } = await supabase
         .from("academy_members")
@@ -38,30 +35,18 @@ export default function PlayersPage() {
         .eq("user_id", user.id)
         .limit(1);
 
-      if (!members || members.length === 0) {
-        router.push("/onboarding");
-        return;
-      }
-
-      const aid = members[0].academy_id;
-      setAcademyId(aid);
+      if (!members || members.length === 0) { router.push("/onboarding"); return; }
 
       const { data, error } = await supabase
         .from("players")
-        .select("id, first_name, last_name, position, jersey_number, status")
-        .eq("academy_id", aid)
+        .select("id, first_name, last_name, position, jersey_number, status, team_id, teams(name)")
+        .eq("academy_id", members[0].academy_id)
         .order("created_at", { ascending: false });
 
-      if (error) {
-        console.error(error);
-        setLoading(false);
-        return;
-      }
-
-      setPlayers(data || []);
+      if (error) { console.error(error); setLoading(false); return; }
+      setPlayers((data as unknown) as Player[] || []);
       setLoading(false);
     }
-
     load();
   }, [router]);
 
@@ -78,9 +63,7 @@ export default function PlayersPage() {
       <div className="mb-8 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">اللاعبين</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {players.length} لاعب
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{players.length} لاعب</p>
         </div>
         <Link href="/dashboard/players/new">
           <Button>
@@ -112,6 +95,7 @@ export default function PlayersPage() {
             <thead className="bg-muted/40">
               <tr className="text-right text-xs text-muted-foreground">
                 <th className="px-4 py-3 font-medium">اللاعب</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">الفريق</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">المركز</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">الرقم</th>
                 <th className="px-4 py-3 font-medium">الحالة</th>
@@ -120,8 +104,13 @@ export default function PlayersPage() {
             <tbody>
               {players.map((p) => (
                 <tr key={p.id} className="border-t text-sm">
-                  <td className="px-4 py-3 font-medium"><Link href={`/dashboard/players/${p.id}`} className="hover:text-primary transition-colors">
-                    {p.first_name} {p.last_name}</Link>
+                  <td className="px-4 py-3 font-medium">
+                    <Link href={`/dashboard/players/${p.id}`} className="hover:text-primary transition-colors">
+                      {p.first_name} {p.last_name}
+                    </Link>
+                  </td>
+                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
+                    {p.teams?.name || "—"}
                   </td>
                   <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
                     {p.position || "—"}
