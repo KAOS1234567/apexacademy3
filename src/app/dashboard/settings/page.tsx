@@ -2,29 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Save, Settings as SettingsIcon, Users, Shield, Building2, Crown, Dumbbell, User as UserIcon, AlertTriangle } from "lucide-react";
+import { Save, Settings as SettingsIcon, Users, Shield, Building2, Crown, Dumbbell, User as UserIcon, AlertTriangle, Trash2, X, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-type Academy = {
-  id: string;
-  name: string;
-  country: string | null;
-  city: string | null;
-  currency: string;
-  timezone: string | null;
-};
-
-type Member = {
-  id: string;
-  user_id: string;
-  role: string;
-  created_at: string;
-  profiles: { full_name: string | null; avatar_url: string | null } | null;
-};
+type Academy = { id: string; name: string; country: string | null; city: string | null; currency: string; timezone: string | null };
+type Member = { id: string; user_id: string; role: string; created_at: string; profiles: { full_name: string | null; avatar_url: string | null } | null };
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "مالك", admin: "مدير", head_coach: "مدرب رئيسي", coach: "مدرب",
@@ -55,6 +40,14 @@ export default function SettingsPage() {
   const [city, setCity] = useState("");
   const [currency, setCurrency] = useState("USD");
 
+  const [deleteAcademyOpen, setDeleteAcademyOpen] = useState(false);
+  const [deleteAcademyInput, setDeleteAcademyInput] = useState("");
+  const [deletingAcademy, setDeletingAcademy] = useState(false);
+
+  const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
+  const [deleteAccountInput, setDeleteAccountInput] = useState("");
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   useEffect(() => {
     async function load() {
       const supabase = createClient();
@@ -68,7 +61,6 @@ export default function SettingsPage() {
         .limit(1);
 
       if (!membersData || membersData.length === 0) { router.push("/onboarding"); return; }
-
       const ac = (membersData[0] as unknown as { academies: Academy }).academies;
       setAcademy(ac);
       setName(ac.name);
@@ -90,7 +82,6 @@ export default function SettingsPage() {
         mList.forEach((x) => { x.profiles = profMap[x.user_id] || null; });
       }
       setMembers(mList);
-
       setLoading(false);
     }
     load();
@@ -99,24 +90,39 @@ export default function SettingsPage() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!academy) return;
-    setError(null);
-    setSuccess(false);
-    setSaving(true);
-
+    setError(null); setSuccess(false); setSaving(true);
     const supabase = createClient();
     const { error } = await supabase.from("academies").update({
-      name: name.trim(),
-      country: country.trim() || null,
-      city: city.trim() || null,
-      currency,
+      name: name.trim(), country: country.trim() || null, city: city.trim() || null, currency,
       updated_at: new Date().toISOString(),
     }).eq("id", academy.id);
-
     if (error) { setError(error.message); setSaving(false); return; }
-    setSaving(false);
-    setSuccess(true);
+    setSaving(false); setSuccess(true);
     setAcademy({ ...academy, name, country, city, currency });
     setTimeout(() => setSuccess(false), 3000);
+    router.refresh();
+  }
+
+  async function handleDeleteAcademy() {
+    if (!academy) return;
+    if (deleteAcademyInput.trim() !== academy.name) { setError("الاسم غير مطابق"); return; }
+    setDeletingAcademy(true);
+    const supabase = createClient();
+    const { error } = await supabase.from("academies").delete().eq("id", academy.id);
+    if (error) { setError(error.message); setDeletingAcademy(false); return; }
+    setDeleteAcademyOpen(false);
+    router.push("/onboarding");
+    router.refresh();
+  }
+
+  async function handleDeleteAccount() {
+    if (deleteAccountInput.trim() !== "حذف") { setError("اكتب كلمة 'حذف' للتأكيد"); return; }
+    setDeletingAccount(true);
+    const supabase = createClient();
+    const { error } = await supabase.rpc("delete_my_account");
+    if (error) { setError(error.message); setDeletingAccount(false); return; }
+    await supabase.auth.signOut();
+    router.push("/login");
     router.refresh();
   }
 
@@ -135,8 +141,7 @@ export default function SettingsPage() {
               <h1 className="text-2xl md:text-3xl font-bold truncate">{academy.name}</h1>
               <p className="mt-1 text-sm text-muted-foreground">
                 {academy.city && academy.country ? `${academy.city}، ${academy.country}` : academy.country || "—"}
-                {" • "}
-                {academy.currency}
+                {" • "}{academy.currency}
               </p>
             </div>
           </div>
@@ -157,19 +162,10 @@ export default function SettingsPage() {
         {tab === "general" && (
           <form onSubmit={handleSave} className="space-y-6">
             <div className="space-y-4 rounded-2xl border bg-card p-6">
-              <div className="space-y-2">
-                <Label htmlFor="name">اسم الأكاديمية *</Label>
-                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} />
-              </div>
+              <div className="space-y-2"><Label htmlFor="name">اسم الأكاديمية *</Label><Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} /></div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="country">الدولة</Label>
-                  <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={saving} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="city">المدينة</Label>
-                  <Input id="city" value={city} onChange={(e) => setCity(e.target.value)} disabled={saving} />
-                </div>
+                <div className="space-y-2"><Label htmlFor="country">الدولة</Label><Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={saving} /></div>
+                <div className="space-y-2"><Label htmlFor="city">المدينة</Label><Input id="city" value={city} onChange={(e) => setCity(e.target.value)} disabled={saving} /></div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="currency">العملة</Label>
@@ -183,16 +179,9 @@ export default function SettingsPage() {
                 </select>
               </div>
             </div>
-
             {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
             {success && (<div className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm text-emerald-500">تم حفظ التعديلات بنجاح</div>)}
-
-            <div className="flex gap-3">
-              <Button type="submit" disabled={saving}>
-                <Save className="h-4 w-4" />
-                {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
-              </Button>
-            </div>
+            <div className="flex gap-3"><Button type="submit" disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</Button></div>
           </form>
         )}
 
@@ -210,18 +199,11 @@ export default function SettingsPage() {
                       {m.profiles?.avatar_url ? (
                         <img src={m.profiles.avatar_url} alt="" style={{ width: 40, height: 40, objectFit: "cover" }} className="rounded-full border" />
                       ) : (
-                        <div className="rounded-full bg-primary/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
-                          <RoleIcon className="h-4 w-4 text-primary" />
-                        </div>
+                        <div className="rounded-full bg-primary/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}><RoleIcon className="h-4 w-4 text-primary" /></div>
                       )}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">
-                          {m.profiles?.full_name || "بدون اسم"}
-                          {isOwner && <span className="ml-2 text-[10px] text-accent">(أنت)</span>}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {ROLE_LABELS[m.role] || m.role}
-                        </p>
+                        <p className="text-sm font-medium truncate">{m.profiles?.full_name || "بدون اسم"}</p>
+                        <p className="text-xs text-muted-foreground">{ROLE_LABELS[m.role] || m.role}</p>
                       </div>
                       <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-[11px] ${isOwner ? "bg-accent/15 text-accent" : "bg-muted text-muted-foreground"}`}>
                         {ROLE_LABELS[m.role] || m.role}
@@ -231,60 +213,108 @@ export default function SettingsPage() {
                 })
               )}
             </div>
-
-            <div className="rounded-2xl border border-dashed bg-muted/20 p-6 text-center">
-              <p className="text-xs text-muted-foreground">
-                دعوة الأعضاء ستكون متاحة قريباً
-              </p>
-            </div>
+            <div className="rounded-2xl border border-dashed bg-muted/20 p-6 text-center"><p className="text-xs text-muted-foreground">دعوة الأعضاء ستكون متاحة قريباً</p></div>
           </div>
         )}
 
         {tab === "advanced" && (
           <div className="space-y-6">
-            <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
-              <div className="flex items-start gap-3 mb-4">
-                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                <div>
-                  <h2 className="text-sm font-bold text-destructive">منطقة الخطر</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    هذه العمليات لا يمكن التراجع عنها. تأكد قبل التنفيذ.
-                  </p>
-                </div>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-3">
-                  <div>
-                    <p className="text-sm font-medium">حذف الأكاديمية</p>
-                    <p className="text-xs text-muted-foreground">حذف كل البيانات نهائياً</p>
-                  </div>
-                  <Button variant="outline" size="sm" disabled className="text-destructive border-destructive/40">
-                    قريباً
-                  </Button>
-                </div>
-              </div>
-            </div>
-
             <div className="rounded-2xl border bg-card p-6">
               <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground mb-4">INFORMATION</h2>
               <div className="space-y-2 text-xs">
-                <div className="flex justify-between py-2 border-b border-border/40">
-                  <span className="text-muted-foreground">معرّف الأكاديمية</span>
-                  <span className="font-mono truncate ml-3 max-w-[60%]" dir="ltr">{academy.id}</span>
+                <div className="flex justify-between py-2 border-b border-border/40"><span className="text-muted-foreground">معرّف الأكاديمية</span><span className="font-mono truncate ml-3 max-w-[60%]" dir="ltr">{academy.id}</span></div>
+                <div className="flex justify-between py-2 border-b border-border/40"><span className="text-muted-foreground">عدد الأعضاء</span><span className="font-mono">{members.length}</span></div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-destructive/40 bg-destructive/5 p-6">
+              <div className="flex items-start gap-3 mb-5">
+                <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <div>
+                  <h2 className="text-sm font-bold text-destructive">منطقة الخطر</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">هذه العمليات لا يمكن التراجع عنها.</p>
                 </div>
-                <div className="flex justify-between py-2 border-b border-border/40">
-                  <span className="text-muted-foreground">عدد الأعضاء</span>
-                  <span className="font-mono">{members.length}</span>
+              </div>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">حذف الأكاديمية</p>
+                    <p className="text-xs text-muted-foreground">حذف كل البيانات نهائياً (اللاعبين، الفرق، المباريات...)</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => { setDeleteAcademyOpen(true); setDeleteAcademyInput(""); setError(null); }} className="text-destructive border-destructive/40 hover:bg-destructive/10 shrink-0">
+                    <Trash2 className="h-3.5 w-3.5" />حذف
+                  </Button>
                 </div>
-                <div className="flex justify-between py-2">
-                  <span className="text-muted-foreground">تاريخ الإنشاء</span>
-                  <span className="font-mono">—</span>
+                <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-4">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">حذف الحساب</p>
+                    <p className="text-xs text-muted-foreground">حذف حسابك وكل الأكاديميات التي تملكها</p>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={() => { setDeleteAccountOpen(true); setDeleteAccountInput(""); setError(null); }} className="text-destructive border-destructive/40 hover:bg-destructive/10 shrink-0">
+                    <LogOut className="h-3.5 w-3.5" />حذف
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {deleteAcademyOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => !deletingAcademy && setDeleteAcademyOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
+                <AlertTriangle className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold">حذف الأكاديمية نهائياً؟</h3>
+                <p className="mt-1 text-xs text-muted-foreground">سيتم حذف كل البيانات (اللاعبين، الفرق، المباريات، الجلسات، الحضور). لا يمكن التراجع.</p>
+              </div>
+              <button onClick={() => !deletingAcademy && setDeleteAcademyOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-2 mb-4">
+              <Label className="text-xs">اكتب اسم الأكاديمية للتأكيد: <span className="font-mono text-accent">{academy.name}</span></Label>
+              <Input value={deleteAcademyInput} onChange={(e) => setDeleteAcademyInput(e.target.value)} disabled={deletingAcademy} placeholder={academy.name} />
+            </div>
+            {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteAcademyOpen(false)} disabled={deletingAcademy}>إلغاء</Button>
+              <Button onClick={handleDeleteAcademy} disabled={deletingAcademy || deleteAcademyInput.trim() !== academy.name} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deletingAcademy ? "جاري الحذف..." : "حذف نهائي"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteAccountOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => !deletingAccount && setDeleteAccountOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
+                <LogOut className="h-5 w-5 text-destructive" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold">حذف حسابك نهائياً؟</h3>
+                <p className="mt-1 text-xs text-muted-foreground">سيتم حذف حسابك وكل الأكاديميات التي تملكها. لا يمكن التراجع.</p>
+              </div>
+              <button onClick={() => !deletingAccount && setDeleteAccountOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-2 mb-4">
+              <Label className="text-xs">اكتب كلمة <span className="font-bold text-destructive">حذف</span> للتأكيد</Label>
+              <Input value={deleteAccountInput} onChange={(e) => setDeleteAccountInput(e.target.value)} disabled={deletingAccount} placeholder="حذف" />
+            </div>
+            {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)} disabled={deletingAccount}>إلغاء</Button>
+              <Button onClick={handleDeleteAccount} disabled={deletingAccount || deleteAccountInput.trim() !== "حذف"} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deletingAccount ? "جاري الحذف..." : "حذف الحساب"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
