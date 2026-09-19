@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Trash2, Save } from "lucide-react";
+import { ArrowRight, Trash2, Save, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { PlayerAttendance } from "@/components/features/PlayerAttendance";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 const POSITIONS = ["حارس مرمى", "قلب دفاع", "ظهير أيمن", "ظهير أيسر", "وسط مدافع", "وسط", "وسط هجومي", "جناح أيمن", "جناح أيسر", "مهاجم"];
+type Team = { id: string; name: string };
 
 type Player = {
   id: string;
@@ -23,14 +24,14 @@ type Player = {
   jersey_number: number | null;
   status: string;
   team_id: string | null;
+  photo_url: string | null;
 };
-
-type Team = { id: string; name: string };
 
 export default function PlayerDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -48,16 +49,36 @@ export default function PlayerDetailPage() {
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [status, setStatus] = useState("active");
   const [teamId, setTeamId] = useState("");
+  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
+  const [newPhotoFile, setNewPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { router.push("/login"); return; }
+
       const { data, error } = await supabase.from("players").select("*").eq("id", id).single();
-
       if (error || !data) { setError("اللاعب غير موجود"); setLoading(false); return; }
-
       const p = data as Player;
       setPlayer(p);
+
+      const { data: members } = await supabase
+        .from("academy_members")
+        .select("academy_id")
+        .eq("user_id", user.id)
+        .limit(1);
+
+      if (members && members.length > 0) {
+        const { data: t } = await supabase
+          .from("teams")
+          .select("id, name")
+          .eq("academy_id", members[0].academy_id)
+          .order("name");
+        setTeams(t || []);
+      }
+
       setFirstName(p.first_name);
       setLastName(p.last_name);
       setDateOfBirth(p.date_of_birth || "");
@@ -67,32 +88,25 @@ export default function PlayerDetailPage() {
       setJerseyNumber(p.jersey_number?.toString() || "");
       setStatus(p.status);
       setTeamId(p.team_id || "");
-
-      if (p.team_id) {
-        // جيب teams نفس الأكاديمية
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
-          if (members && members.length > 0) {
-            const { data: t } = await supabase.from("teams").select("id, name").eq("academy_id", members[0].academy_id);
-            setTeams(t || []);
-          }
-        }
-      } else {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
-          if (members && members.length > 0) {
-            const { data: t } = await supabase.from("teams").select("id, name").eq("academy_id", members[0].academy_id);
-            setTeams(t || []);
-          }
-        }
-      }
-
+      setPhotoUrl(p.photo_url);
       setLoading(false);
     }
     if (id) load();
-  }, [id]);
+  }, [id, router]);
+
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("حجم الصورة كبير (الحد 10MB)"); return; }
+    setNewPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  function clearNewPhoto() {
+    setNewPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -100,6 +114,25 @@ export default function PlayerDetailPage() {
     setSaving(true);
 
     const supabase = createClient();
+    let finalPhotoUrl = photoUrl;
+
+    // ارفع الصورة الجديدة إذا فيه
+    if (newPhotoFile && player) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
+        if (members && members.length > 0) {
+          const aid = members[0].academy_id;
+          const ext = newPhotoFile.name.split(".").pop() || "jpg";
+          const fileName = `${aid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from("players").upload(fileName, newPhotoFile);
+          if (uploadError) { setError("فشل رفع الصورة: " + uploadError.message); setSaving(false); return; }
+          const { data: { publicUrl } } = supabase.storage.from("players").getPublicUrl(fileName);
+          finalPhotoUrl = publicUrl;
+        }
+      }
+    }
+
     const { error } = await supabase.from("players").update({
       first_name: firstName.trim(),
       last_name: lastName.trim(),
@@ -110,6 +143,7 @@ export default function PlayerDetailPage() {
       jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
       status,
       team_id: teamId || null,
+      photo_url: finalPhotoUrl,
       updated_at: new Date().toISOString(),
     }).eq("id", id);
 
@@ -142,6 +176,8 @@ export default function PlayerDetailPage() {
     );
   }
 
+  const displayPhoto = photoPreview || photoUrl;
+
   return (
     <div className="p-6 md:p-10">
       <div className="mx-auto max-w-2xl">
@@ -163,6 +199,50 @@ export default function PlayerDetailPage() {
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
+          {/* صورة اللاعب */}
+          <div className="space-y-4 rounded-2xl border bg-card p-6">
+            <h2 className="text-sm font-semibold text-muted-foreground">صورة اللاعب</h2>
+            <div className="flex items-center gap-4">
+              {displayPhoto ? (
+                <div className="relative">
+                  <img src={displayPhoto} alt="player" className="h-28 w-28 rounded-full object-cover border-2 border-primary" />
+                  {photoPreview && (
+                    <button
+                      type="button"
+                      onClick={clearNewPhoto}
+                      className="absolute -top-1 -left-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex h-28 w-28 items-center justify-center rounded-full border-2 border-dashed bg-muted/30">
+                  <Upload className="h-7 w-7 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={saving}
+                >
+                  <Upload className="h-4 w-4" />
+                  {displayPhoto ? "تغيير الصورة" : "اختر صورة"}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">الحد 10 MB</p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 rounded-2xl border bg-card p-6">
             <h2 className="text-sm font-semibold text-muted-foreground">المعلومات الأساسية</h2>
             <div className="grid gap-4 md:grid-cols-2">
