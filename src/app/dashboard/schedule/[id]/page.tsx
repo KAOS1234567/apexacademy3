@@ -70,13 +70,14 @@ export default function SessionDetailPage() {
       setSession(s as unknown as Session);
 
       // جيب لاعبين الفريق
-      const playersQuery = supabase
+      let playersQuery = supabase
         .from("players")
         .select("id, first_name, last_name, position, jersey_number")
         .eq("status", "active")
         .order("jersey_number", { ascending: true, nullsFirst: false });
 
       if (s.team_id) {
+        playersQuery = playersQuery.eq("team_id", s.team_id);
         // ملاحظة: اللاعبين ما مرتبطين بفريق حالياً — نعرض كل اللاعبين
         // (الميزة راح تتحسن لاحقاً لما نضيف ربط لاعب-فريق)
       }
