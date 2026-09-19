@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,8 @@ import { Label } from "@/components/ui/label";
 
 export default function NewTeamPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -19,6 +21,8 @@ export default function NewTeamPage() {
   const [category, setCategory] = useState("");
   const [season, setSeason] = useState("");
   const [description, setDescription] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -38,6 +42,20 @@ export default function NewTeamPage() {
     load();
   }, [router]);
 
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("حجم الصورة كبير (الحد 10MB)"); return; }
+    setLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
+  function clearLogo() {
+    setLogoFile(null);
+    setLogoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -47,12 +65,24 @@ export default function NewTeamPage() {
 
     setLoading(true);
     const supabase = createClient();
+
+    let logoUrl: string | null = null;
+    if (logoFile) {
+      const ext = logoFile.name.split(".").pop() || "jpg";
+      const fileName = `teams/${academyId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("players").upload(fileName, logoFile);
+      if (uploadError) { setError("فشل رفع الشعار: " + uploadError.message); setLoading(false); return; }
+      const { data: { publicUrl } } = supabase.storage.from("players").getPublicUrl(fileName);
+      logoUrl = publicUrl;
+    }
+
     const { error } = await supabase.from("teams").insert({
       academy_id: academyId,
       name: name.trim(),
       category: category || null,
       season: season.trim() || null,
       description: description.trim() || null,
+      logo_url: logoUrl,
     });
 
     if (error) { setError(error.message); setLoading(false); return; }
@@ -64,8 +94,7 @@ export default function NewTeamPage() {
     <div className="p-6 md:p-10">
       <div className="mx-auto max-w-2xl">
         <Link href="/dashboard/teams" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowRight className="h-4 w-4" />
-          رجوع للفرق
+          <ArrowRight className="h-4 w-4" />رجوع للفرق
         </Link>
 
         <h1 className="mb-2 text-2xl font-bold">إضافة فريق جديد</h1>
@@ -73,21 +102,44 @@ export default function NewTeamPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4 rounded-2xl border bg-card p-6">
+            <h2 className="text-sm font-semibold text-muted-foreground">شعار الفريق</h2>
+            <div className="flex items-center gap-4">
+              {logoPreview ? (
+                <div className="relative">
+                  <img src={logoPreview} alt="preview" className="h-24 w-24 rounded-full object-cover border-2 border-primary" />
+                  <button
+                    type="button"
+                    onClick={clearLogo}
+                    className="absolute -top-1 -left-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed bg-muted/30">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={loading}>
+                  <Upload className="h-4 w-4" />
+                  {logoFile ? "تغيير الشعار" : "اختر شعار"}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">اختياري — الحد 10 MB</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4 rounded-2xl border bg-card p-6">
             <div className="space-y-2">
               <Label htmlFor="name">اسم الفريق *</Label>
               <Input id="name" placeholder="مثال: فريق تحت 15" value={name} onChange={(e) => setName(e.target.value)} required disabled={loading} />
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="category">الفئة</Label>
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  disabled={loading}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
+                <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} disabled={loading} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                   <option value="">غير محدد</option>
                   <option value="U8">تحت 8</option>
                   <option value="U10">تحت 10</option>
@@ -104,33 +156,17 @@ export default function NewTeamPage() {
                 <Input id="season" placeholder="مثال: 2026/2027" value={season} onChange={(e) => setSeason(e.target.value)} disabled={loading} />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="description">وصف مختصر</Label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={loading}
-                rows={3}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-              />
+              <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={loading} rows={3} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50" />
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+          {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={loading}>
-              {loading ? "جاري الحفظ..." : "حفظ الفريق"}
-            </Button>
-            <Link href="/dashboard/teams">
-              <Button type="button" variant="outline" disabled={loading}>إلغاء</Button>
-            </Link>
+            <Button type="submit" disabled={loading}>{loading ? "جاري الحفظ..." : "حفظ الفريق"}</Button>
+            <Link href="/dashboard/teams"><Button type="button" variant="outline" disabled={loading}>إلغاء</Button></Link>
           </div>
         </form>
       </div>

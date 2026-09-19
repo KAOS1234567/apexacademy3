@@ -12,6 +12,7 @@ type Team = {
   name: string;
   category: string | null;
   season: string | null;
+  logo_url: string | null;
 };
 
 export default function TeamsPage() {
@@ -35,7 +36,7 @@ export default function TeamsPage() {
 
       const { data, error } = await supabase
         .from("teams")
-        .select("id, name, category, season")
+        .select("id, name, category, season, logo_url")
         .eq("academy_id", members[0].academy_id)
         .order("created_at", { ascending: false });
 
@@ -85,8 +86,18 @@ export default function TeamsPage() {
               href={`/dashboard/teams/${t.id}`}
               className="rounded-2xl border bg-card p-5 transition hover:border-primary/50"
             >
-              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/15">
-                <Shield className="h-5 w-5 text-primary" />
+              <div className="mb-3">
+                {t.logo_url ? (
+                  <img
+                    src={t.logo_url}
+                    alt={t.name}
+                    className="h-14 w-14 rounded-xl object-cover border border-border"
+                  />
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-primary/15">
+                    <Shield className="h-7 w-7 text-primary" />
+                  </div>
+                )}
               </div>
               <h3 className="font-semibold">{t.name}</h3>
               <p className="mt-1 text-xs text-muted-foreground">
