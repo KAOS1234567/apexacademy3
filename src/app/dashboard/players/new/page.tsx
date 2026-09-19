@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { ArrowRight, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,6 +14,8 @@ type Team = { id: string; name: string };
 
 export default function NewPlayerPage() {
   const router = useRouter();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
@@ -28,6 +30,8 @@ export default function NewPlayerPage() {
   const [jerseyNumber, setJerseyNumber] = useState("");
   const [status, setStatus] = useState("active");
   const [teamId, setTeamId] = useState("");
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -44,13 +48,39 @@ export default function NewPlayerPage() {
     load();
   }, [router]);
 
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("حجم الصورة كبير (الحد 10MB)"); return; }
+    setPhotoFile(file);
+    setPhotoPreview(URL.createObjectURL(file));
+  }
+
+  function clearPhoto() {
+    setPhotoFile(null);
+    setPhotoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     if (!academyId) return;
     if (firstName.trim().length < 2 || lastName.trim().length < 2) { setError("الاسم الأول والعائلة مطلوبان"); return; }
+
     setLoading(true);
     const supabase = createClient();
+
+    let photoUrl: string | null = null;
+    if (photoFile) {
+      const ext = photoFile.name.split(".").pop() || "jpg";
+      const fileName = `${academyId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("players").upload(fileName, photoFile);
+      if (uploadError) { setError("فشل رفع الصورة: " + uploadError.message); setLoading(false); return; }
+      const { data: { publicUrl } } = supabase.storage.from("players").getPublicUrl(fileName);
+      photoUrl = publicUrl;
+    }
+
     const { error } = await supabase.from("players").insert({
       academy_id: academyId,
       team_id: teamId || null,
@@ -62,7 +92,9 @@ export default function NewPlayerPage() {
       preferred_foot: preferredFoot || null,
       jersey_number: jerseyNumber ? parseInt(jerseyNumber) : null,
       status,
+      photo_url: photoUrl,
     });
+
     if (error) { setError(error.message); setLoading(false); return; }
     router.push("/dashboard/players");
     router.refresh();
@@ -74,9 +106,54 @@ export default function NewPlayerPage() {
         <Link href="/dashboard/players" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowRight className="h-4 w-4" />رجوع للاعبين
         </Link>
+
         <h1 className="mb-2 text-2xl font-bold">إضافة لاعب جديد</h1>
         <p className="mb-8 text-sm text-muted-foreground">املأ بيانات اللاعب الأساسية</p>
+
         <form onSubmit={handleSubmit} className="space-y-6">
+          {/* صورة اللاعب */}
+          <div className="space-y-4 rounded-2xl border bg-card p-6">
+            <h2 className="text-sm font-semibold text-muted-foreground">صورة اللاعب</h2>
+            <div className="flex items-center gap-4">
+              {photoPreview ? (
+                <div className="relative">
+                  <img src={photoPreview} alt="preview" className="h-24 w-24 rounded-full object-cover border-2 border-primary" />
+                  <button
+                    type="button"
+                    onClick={clearPhoto}
+                    className="absolute -top-1 -left-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex h-24 w-24 items-center justify-center rounded-full border-2 border-dashed bg-muted/30">
+                  <Upload className="h-6 w-6 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={handlePhotoChange}
+                  className="hidden"
+                  id="photo-upload"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={loading}
+                >
+                  <Upload className="h-4 w-4" />
+                  {photoFile ? "تغيير الصورة" : "اختر صورة"}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">صورة شخصية (اختياري) — الحد 10 MB</p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 rounded-2xl border bg-card p-6">
             <h2 className="text-sm font-semibold text-muted-foreground">المعلومات الأساسية</h2>
             <div className="grid gap-4 md:grid-cols-2">

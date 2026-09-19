@@ -15,6 +15,7 @@ type Player = {
   jersey_number: number | null;
   status: string;
   team_id: string | null;
+  photo_url: string | null;
   teams: { name: string } | null;
 };
 
@@ -39,7 +40,7 @@ export default function PlayersPage() {
 
       const { data, error } = await supabase
         .from("players")
-        .select("id, first_name, last_name, position, jersey_number, status, team_id, teams(name)")
+        .select("id, first_name, last_name, position, jersey_number, status, team_id, photo_url, teams(name)")
         .eq("academy_id", members[0].academy_id)
         .order("created_at", { ascending: false });
 
@@ -66,10 +67,7 @@ export default function PlayersPage() {
           <p className="mt-1 text-sm text-muted-foreground">{players.length} لاعب</p>
         </div>
         <Link href="/dashboard/players/new">
-          <Button>
-            <Plus className="h-4 w-4" />
-            إضافة لاعب
-          </Button>
+          <Button><Plus className="h-4 w-4" />إضافة لاعب</Button>
         </Link>
       </div>
 
@@ -79,15 +77,8 @@ export default function PlayersPage() {
             <User className="h-6 w-6 text-muted-foreground" />
           </div>
           <h3 className="mb-2 text-lg font-semibold">لا يوجد لاعبين بعد</h3>
-          <p className="mb-6 text-sm text-muted-foreground">
-            ابدأ بإضافة أول لاعب في أكاديميتك
-          </p>
-          <Link href="/dashboard/players/new">
-            <Button>
-              <Plus className="h-4 w-4" />
-              إضافة لاعب
-            </Button>
-          </Link>
+          <p className="mb-6 text-sm text-muted-foreground">ابدأ بإضافة أول لاعب في أكاديميتك</p>
+          <Link href="/dashboard/players/new"><Button><Plus className="h-4 w-4" />إضافة لاعب</Button></Link>
         </div>
       ) : (
         <div className="overflow-hidden rounded-2xl border bg-card">
@@ -105,23 +96,26 @@ export default function PlayersPage() {
               {players.map((p) => (
                 <tr key={p.id} className="border-t text-sm">
                   <td className="px-4 py-3 font-medium">
-                    <Link href={`/dashboard/players/${p.id}`} className="hover:text-primary transition-colors">
-                      {p.first_name} {p.last_name}
+                    <Link href={`/dashboard/players/${p.id}`} className="flex items-center gap-3 hover:text-primary transition-colors">
+                      {p.photo_url ? (
+                        <img
+                          src={p.photo_url}
+                          alt={`${p.first_name} ${p.last_name}`}
+                          className="h-9 w-9 rounded-full object-cover border border-border"
+                        />
+                      ) : (
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted text-xs font-bold text-muted-foreground">
+                          {p.first_name.charAt(0)}
+                        </div>
+                      )}
+                      <span>{p.first_name} {p.last_name}</span>
                     </Link>
                   </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {p.teams?.name || "—"}
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {p.position || "—"}
-                  </td>
-                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">
-                    {p.jersey_number ?? "—"}
-                  </td>
+                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{p.teams?.name || "—"}</td>
+                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{p.position || "—"}</td>
+                  <td className="hidden px-4 py-3 text-muted-foreground md:table-cell">{p.jersey_number ?? "—"}</td>
                   <td className="px-4 py-3">
-                    <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs text-primary">
-                      {p.status}
-                    </span>
+                    <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs text-primary">{p.status}</span>
                   </td>
                 </tr>
               ))}
