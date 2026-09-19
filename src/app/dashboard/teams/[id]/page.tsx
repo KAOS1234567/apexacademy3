@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Trash2, Save, Upload, X, Users, Edit3, BarChart3 } from "lucide-react";
+import { ArrowRight, Trash2, Save, Upload, X, Users, Edit3, BarChart3, User } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,7 @@ type Team = {
   season: string | null;
   description: string | null;
   logo_url: string | null;
+  head_coach_id: string | null;
 };
 
 type Player = {
@@ -38,6 +39,13 @@ type Match = {
   competition: string | null;
 };
 
+type Coach = {
+  id: string;
+  full_name: string;
+  role: string;
+  photo_url: string | null;
+};
+
 type TeamStats = {
   goals: number;
   assists: number;
@@ -47,6 +55,16 @@ type TeamStats = {
 };
 
 type Tab = "overview" | "edit";
+
+const ROLE_LABELS: Record<string, string> = {
+  head_coach: "مدرب رئيسي",
+  coach: "مدرب",
+  assistant_coach: "مدرب مساعد",
+  analyst: "محلل",
+  medical: "طبي",
+  accountant: "محاسب",
+  staff: "إداري",
+};
 
 export default function TeamDetailPage() {
   const router = useRouter();
@@ -61,6 +79,8 @@ export default function TeamDetailPage() {
   const [team, setTeam] = useState<Team | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [matches, setMatches] = useState<Match[]>([]);
+  const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [headCoach, setHeadCoach] = useState<Coach | null>(null);
   const [stats, setStats] = useState<TeamStats>({ goals: 0, assists: 0, yellow: 0, red: 0, matches: 0 });
   const [tab, setTab] = useState<Tab>("overview");
 
@@ -68,6 +88,7 @@ export default function TeamDetailPage() {
   const [category, setCategory] = useState("");
   const [season, setSeason] = useState("");
   const [description, setDescription] = useState("");
+  const [headCoachId, setHeadCoachId] = useState("");
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -83,9 +104,13 @@ export default function TeamDetailPage() {
       setCategory(t.category || "");
       setSeason(t.season || "");
       setDescription(t.description || "");
+      setHeadCoachId(t.head_coach_id || "");
       setLogoUrl(t.logo_url);
 
-      const [pData, mData] = await Promise.all([
+      const { data: tMeta } = await supabase.from("teams").select("academy_id").eq("id", id).single();
+      const aid = tMeta?.academy_id || "";
+
+      const [pData, mData, cData] = await Promise.all([
         supabase
           .from("players")
           .select("id, first_name, last_name, position, jersey_number, photo_url, status")
@@ -96,9 +121,22 @@ export default function TeamDetailPage() {
           .select("id, opponent, match_date, home_score, away_score, venue, competition")
           .eq("team_id", id)
           .order("match_date", { ascending: false }),
+        supabase
+          .from("staff")
+          .select("id, full_name, role, photo_url")
+          .eq("academy_id", aid)
+          .eq("status", "active")
+          .order("full_name"),
       ]);
       setPlayers(pData.data || []);
       setMatches(mData.data || []);
+
+      const allCoaches = (cData.data || []) as Coach[];
+      setCoaches(allCoaches);
+      if (t.head_coach_id) {
+        const found = allCoaches.find((c) => c.id === t.head_coach_id);
+        setHeadCoach(found || null);
+      }
 
       const { data: evData } = await supabase
         .from("match_events")
@@ -161,6 +199,7 @@ export default function TeamDetailPage() {
       category: category || null,
       season: season.trim() || null,
       description: description.trim() || null,
+      head_coach_id: headCoachId || null,
       logo_url: finalLogoUrl,
       updated_at: new Date().toISOString(),
     }).eq("id", id);
@@ -171,7 +210,9 @@ export default function TeamDetailPage() {
     setLogoUrl(finalLogoUrl);
     setNewLogoFile(null);
     setLogoPreview(null);
-    setTeam((prev) => prev ? { ...prev, name, category, season, description, logo_url: finalLogoUrl } : null);
+    setTeam((prev) => prev ? { ...prev, name, category, season, description, head_coach_id: headCoachId || null, logo_url: finalLogoUrl } : null);
+    const found = coaches.find((c) => c.id === headCoachId);
+    setHeadCoach(found || null);
     router.refresh();
   }
 
@@ -214,7 +255,7 @@ export default function TeamDetailPage() {
             {displayLogo ? (
               <img src={displayLogo} alt={team.name} style={{ width: 80, height: 80, objectFit: "cover" }} className="rounded-2xl border-2 border-primary shrink-0" />
             ) : (
-              <div className="h-20 w-20 rounded-2xl bg-primary/15 flex items-center justify-center shrink-0">
+              <div className="rounded-2xl bg-primary/15 flex items-center justify-center shrink-0" style={{ width: 80, height: 80 }}>
                 <Users className="h-10 w-10 text-primary" />
               </div>
             )}
@@ -223,6 +264,18 @@ export default function TeamDetailPage() {
               <p className="mt-1 text-sm text-muted-foreground">
                 {team.category || "بدون فئة"} • {team.season || "بدون موسم"}
               </p>
+              {headCoach && (
+                <div className="mt-3 inline-flex items-center gap-2 rounded-full border bg-background/60 px-3 py-1">
+                  {headCoach.photo_url ? (
+                    <img src={headCoach.photo_url} alt={headCoach.full_name} style={{ width: 20, height: 20, objectFit: "cover" }} className="rounded-full" />
+                  ) : (
+                    <User className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <Link href={`/dashboard/staff/${headCoach.id}`} className="text-xs hover:text-accent">
+                    {headCoach.full_name} · {ROLE_LABELS[headCoach.role] || headCoach.role}
+                  </Link>
+                </div>
+              )}
               {team.description && (
                 <p className="mt-2 text-xs text-muted-foreground line-clamp-2">{team.description}</p>
               )}
@@ -302,9 +355,9 @@ export default function TeamDetailPage() {
                         {p.jersey_number != null ? String(p.jersey_number).padStart(2, "0") : "—"}
                       </span>
                       {p.photo_url ? (
-                        <img src={p.photo_url} alt={`${p.first_name} ${p.last_name}`} className="h-8 w-8 rounded-full object-cover border" />
+                        <img src={p.photo_url} alt={`${p.first_name} ${p.last_name}`} style={{ width: 32, height: 32, objectFit: "cover" }} className="rounded-full border" />
                       ) : (
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground">
+                        <div className="rounded-full bg-muted flex items-center justify-center text-xs text-muted-foreground" style={{ width: 32, height: 32 }}>
                           {p.first_name.charAt(0)}
                         </div>
                       )}
@@ -377,7 +430,7 @@ export default function TeamDetailPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="flex h-24 w-24 items-center justify-center rounded-2xl border-2 border-dashed bg-muted/30">
+                  <div className="flex items-center justify-center rounded-2xl border-2 border-dashed bg-muted/30" style={{ width: 96, height: 96 }}>
                     <Upload className="h-6 w-6 text-muted-foreground" />
                   </div>
                 )}
@@ -416,6 +469,20 @@ export default function TeamDetailPage() {
                   <Label htmlFor="season">الموسم</Label>
                   <Input id="season" value={season} onChange={(e) => setSeason(e.target.value)} disabled={saving} />
                 </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="headCoach">المدرب الرئيسي</Label>
+                <select id="headCoach" value={headCoachId} onChange={(e) => setHeadCoachId(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
+                  <option value="">بدون مدرب</option>
+                  {coaches.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.full_name} · {ROLE_LABELS[c.role] || c.role}
+                    </option>
+                  ))}
+                </select>
+                {coaches.length === 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">لا يوجد مدربون — أضفهم من صفحة المدربين</p>
+                )}
               </div>
               <div className="space-y-2">
                 <Label htmlFor="description">وصف مختصر</Label>
