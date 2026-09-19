@@ -13,6 +13,7 @@ type Staff = {
   role: string;
   status: string;
   phone: string | null;
+  photo_url: string | null;
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -46,7 +47,7 @@ export default function StaffPage() {
 
       const { data, error } = await supabase
         .from("staff")
-        .select("id, full_name, role, status, phone")
+        .select("id, full_name, role, status, phone, photo_url")
         .eq("academy_id", members[0].academy_id)
         .order("created_at", { ascending: false });
 
@@ -97,9 +98,13 @@ export default function StaffPage() {
               className="rounded-2xl border bg-card p-5 transition hover:border-primary/50"
             >
               <div className="mb-3 flex items-center gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary text-lg font-bold">
-                  {s.full_name.charAt(0)}
-                </div>
+                {s.photo_url ? (
+                  <img src={s.photo_url} alt={s.full_name} className="h-12 w-12 rounded-full object-cover border border-border" />
+                ) : (
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary text-lg font-bold">
+                    {s.full_name.charAt(0)}
+                  </div>
+                )}
                 <div className="min-w-0 flex-1">
                   <h3 className="truncate font-semibold">{s.full_name}</h3>
                   <p className="text-xs text-muted-foreground">
@@ -108,7 +113,9 @@ export default function StaffPage() {
                 </div>
               </div>
               <div className="flex items-center justify-between">
-                <span className={cnBadge(s.status)}>
+                <span className={s.status === "active"
+                  ? "rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] text-emerald-500"
+                  : "rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground"}>
                   {s.status === "active" ? "نشط" : "غير نشط"}
                 </span>
                 {s.phone && (
@@ -121,10 +128,4 @@ export default function StaffPage() {
       )}
     </div>
   );
-}
-
-function cnBadge(status: string) {
-  return status === "active"
-    ? "rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-[11px] text-emerald-500"
-    : "rounded-full bg-muted px-2.5 py-0.5 text-[11px] text-muted-foreground";
 }
