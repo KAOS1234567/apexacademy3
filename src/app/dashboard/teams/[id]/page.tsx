@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
-import { ArrowRight, Trash2, Save } from "lucide-react";
+import { ArrowRight, Trash2, Save, Upload, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,12 +15,14 @@ type Team = {
   category: string | null;
   season: string | null;
   description: string | null;
+  logo_url: string | null;
 };
 
 export default function TeamDetailPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -32,6 +34,9 @@ export default function TeamDetailPage() {
   const [category, setCategory] = useState("");
   const [season, setSeason] = useState("");
   const [description, setDescription] = useState("");
+  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const [newLogoFile, setNewLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -44,23 +49,59 @@ export default function TeamDetailPage() {
       setCategory(t.category || "");
       setSeason(t.season || "");
       setDescription(t.description || "");
+      setLogoUrl(t.logo_url);
       setLoading(false);
     }
     if (id) load();
   }, [id]);
 
+  function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) { setError("حجم الصورة كبير (الحد 10MB)"); return; }
+    setNewLogoFile(file);
+    setLogoPreview(URL.createObjectURL(file));
+  }
+
+  function clearNewLogo() {
+    setNewLogoFile(null);
+    setLogoPreview(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setSaving(true);
+
     const supabase = createClient();
+    let finalLogoUrl = logoUrl;
+
+    if (newLogoFile && team) {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
+        if (members && members.length > 0) {
+          const aid = members[0].academy_id;
+          const ext = newLogoFile.name.split(".").pop() || "jpg";
+          const fileName = `teams/${aid}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+          const { error: uploadError } = await supabase.storage.from("players").upload(fileName, newLogoFile);
+          if (uploadError) { setError("فشل رفع الشعار: " + uploadError.message); setSaving(false); return; }
+          const { data: { publicUrl } } = supabase.storage.from("players").getPublicUrl(fileName);
+          finalLogoUrl = publicUrl;
+        }
+      }
+    }
+
     const { error } = await supabase.from("teams").update({
       name: name.trim(),
       category: category || null,
       season: season.trim() || null,
       description: description.trim() || null,
+      logo_url: finalLogoUrl,
       updated_at: new Date().toISOString(),
     }).eq("id", id);
+
     if (error) { setError(error.message); setSaving(false); return; }
     setSaving(false);
     router.push("/dashboard/teams");
@@ -68,11 +109,10 @@ export default function TeamDetailPage() {
   }
 
   async function handleDelete() {
-    if (!confirm("هل أنت متأكد من حذف هذا الفريق؟")) return;
+    if (!confirm("حذف هذا الفريق؟")) return;
     setDeleting(true);
     const supabase = createClient();
-    const { error } = await supabase.from("teams").delete().eq("id", id);
-    if (error) { setError(error.message); setDeleting(false); return; }
+    await supabase.from("teams").delete().eq("id", id);
     router.push("/dashboard/teams");
     router.refresh();
   }
@@ -90,12 +130,13 @@ export default function TeamDetailPage() {
     );
   }
 
+  const displayLogo = logoPreview || logoUrl;
+
   return (
     <div className="p-6 md:p-10">
       <div className="mx-auto max-w-2xl">
         <Link href="/dashboard/teams" className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowRight className="h-4 w-4" />
-          رجوع للفرق
+          <ArrowRight className="h-4 w-4" />رجوع للفرق
         </Link>
 
         <div className="mb-8 flex items-start justify-between gap-4">
@@ -105,35 +146,51 @@ export default function TeamDetailPage() {
               {team.category || "بدون فئة"} • {team.season || "بدون موسم"}
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleDelete}
-            disabled={deleting}
-            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-          >
+          <Button variant="outline" size="sm" onClick={handleDelete} disabled={deleting} className="text-destructive hover:bg-destructive/10 hover:text-destructive">
             <Trash2 className="h-4 w-4" />
             {deleting ? "جاري الحذف..." : "حذف"}
           </Button>
         </div>
 
         <form onSubmit={handleSave} className="space-y-6">
+          {/* شعار الفريق */}
+          <div className="space-y-4 rounded-2xl border bg-card p-6">
+            <h2 className="text-sm font-semibold text-muted-foreground">شعار الفريق</h2>
+            <div className="flex items-center gap-4">
+              {displayLogo ? (
+                <div className="relative">
+                  <img src={displayLogo} alt="team logo" className="h-28 w-28 rounded-2xl object-cover border-2 border-primary" />
+                  {logoPreview && (
+                    <button type="button" onClick={clearNewLogo} className="absolute -top-1 -left-1 flex h-6 w-6 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                      <X className="h-3 w-3" />
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <div className="flex h-28 w-28 items-center justify-center rounded-2xl border-2 border-dashed bg-muted/30">
+                  <Upload className="h-7 w-7 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1">
+                <input ref={fileInputRef} type="file" accept="image/*" onChange={handleLogoChange} className="hidden" />
+                <Button type="button" variant="outline" onClick={() => fileInputRef.current?.click()} disabled={saving}>
+                  <Upload className="h-4 w-4" />
+                  {displayLogo ? "تغيير الشعار" : "اختر شعار"}
+                </Button>
+                <p className="mt-2 text-xs text-muted-foreground">الحد 10 MB</p>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-4 rounded-2xl border bg-card p-6">
             <div className="space-y-2">
               <Label htmlFor="name">اسم الفريق</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} />
             </div>
-
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="category">الفئة</Label>
-                <select
-                  id="category"
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  disabled={saving}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
+                <select id="category" value={category} onChange={(e) => setCategory(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                   <option value="">غير محدد</option>
                   <option value="U8">تحت 8</option>
                   <option value="U10">تحت 10</option>
@@ -150,34 +207,17 @@ export default function TeamDetailPage() {
                 <Input id="season" value={season} onChange={(e) => setSeason(e.target.value)} disabled={saving} />
               </div>
             </div>
-
             <div className="space-y-2">
               <Label htmlFor="description">وصف مختصر</Label>
-              <textarea
-                id="description"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                disabled={saving}
-                rows={3}
-                className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-              />
+              <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} disabled={saving} rows={3} className="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50" />
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+          {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={saving}>
-              <Save className="h-4 w-4" />
-              {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
-            </Button>
-            <Link href="/dashboard/teams">
-              <Button type="button" variant="outline" disabled={saving}>إلغاء</Button>
-            </Link>
+            <Button type="submit" disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</Button>
+            <Link href="/dashboard/teams"><Button type="button" variant="outline" disabled={saving}>إلغاء</Button></Link>
           </div>
         </form>
       </div>
