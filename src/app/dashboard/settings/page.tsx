@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Save, Settings as SettingsIcon, Users, Shield, Building2, Crown, Dumbbell, User as UserIcon, AlertTriangle, Trash2, X, LogOut } from "lucide-react";
+import { Save, Settings as SettingsIcon, Users, Shield, Building2, Crown, Dumbbell, User as UserIcon, AlertTriangle, Trash2, X, LogOut, Link2, Copy, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 
 type Academy = { id: string; name: string; country: string | null; city: string | null; currency: string; timezone: string | null };
 type Member = { id: string; user_id: string; role: string; created_at: string; profiles: { full_name: string | null; avatar_url: string | null } | null };
+type Invite = { id: string; code: string; role: string; created_at: string; used_count: number; max_uses: number | null; is_active: boolean };
 
 const ROLE_LABELS: Record<string, string> = {
   owner: "مالك", admin: "مدير", head_coach: "مدرب رئيسي", coach: "مدرب",
@@ -23,6 +24,8 @@ const ROLE_ICONS: Record<string, typeof Crown> = {
   accountant: UserIcon, staff: UserIcon,
 };
 
+const INVITE_ROLES = ["admin", "head_coach", "coach", "assistant_coach", "analyst", "medical", "accountant", "staff"];
+
 type Tab = "general" | "members" | "advanced";
 
 export default function SettingsPage() {
@@ -33,6 +36,7 @@ export default function SettingsPage() {
   const [success, setSuccess] = useState(false);
   const [academy, setAcademy] = useState<Academy | null>(null);
   const [members, setMembers] = useState<Member[]>([]);
+  const [invites, setInvites] = useState<Invite[]>([]);
   const [tab, setTab] = useState<Tab>("general");
 
   const [name, setName] = useState("");
@@ -47,6 +51,23 @@ export default function SettingsPage() {
   const [deleteAccountOpen, setDeleteAccountOpen] = useState(false);
   const [deleteAccountInput, setDeleteAccountInput] = useState("");
   const [deletingAccount, setDeletingAccount] = useState(false);
+
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [inviteRole, setInviteRole] = useState("coach");
+  const [creatingInvite, setCreatingInvite] = useState(false);
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  async function loadInvites(academyId: string) {
+    const supabase = createClient();
+    const { data } = await supabase
+      .from("academy_invites")
+      .select("id, code, role, created_at, used_count, max_uses, is_active")
+      .eq("academy_id", academyId)
+      .eq("is_active", true)
+      .order("created_at", { ascending: false });
+    setInvites((data as Invite[]) || []);
+  }
 
   useEffect(() => {
     async function load() {
@@ -82,6 +103,8 @@ export default function SettingsPage() {
         mList.forEach((x) => { x.profiles = profMap[x.user_id] || null; });
       }
       setMembers(mList);
+
+      await loadInvites(ac.id);
       setLoading(false);
     }
     load();
@@ -124,6 +147,52 @@ export default function SettingsPage() {
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  async function handleCreateInvite() {
+    if (!academy) return;
+    setCreatingInvite(true);
+    setError(null);
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) { setCreatingInvite(false); return; }
+
+    const code = Math.random().toString(36).slice(2, 10) + Math.random().toString(36).slice(2, 6);
+    const { data, error } = await supabase.from("academy_invites").insert({
+      academy_id: academy.id,
+      code,
+      role: inviteRole,
+      created_by: user.id,
+    }).select().single();
+
+    if (error) { setError(error.message); setCreatingInvite(false); return; }
+
+    const link = `${window.location.origin}/join/${data.code}`;
+    setGeneratedLink(link);
+    setCreatingInvite(false);
+    await loadInvites(academy.id);
+  }
+
+  async function copyLink(link: string) {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {}
+  }
+
+  async function handleDeleteInvite(inviteId: string) {
+    if (!confirm("حذف هذه الدعوة؟")) return;
+    const supabase = createClient();
+    await supabase.from("academy_invites").delete().eq("id", inviteId);
+    if (academy) await loadInvites(academy.id);
+  }
+
+  function closeInviteModal() {
+    setInviteOpen(false);
+    setGeneratedLink(null);
+    setInviteRole("coach");
+    setCopied(false);
   }
 
   if (loading) return <div className="flex h-full items-center justify-center p-10"><p className="text-muted-foreground">جاري التحميل...</p></div>;
@@ -186,7 +255,14 @@ export default function SettingsPage() {
         )}
 
         {tab === "members" && (
-          <div className="space-y-4">
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">MEMBERS</h2>
+              <Button size="sm" onClick={() => setInviteOpen(true)}>
+                <Plus className="h-4 w-4" />دعوة عضو
+              </Button>
+            </div>
+
             <div className="rounded-2xl border bg-card overflow-hidden divide-y">
               {members.length === 0 ? (
                 <p className="text-center text-sm text-muted-foreground py-8">لا يوجد أعضاء</p>
@@ -213,7 +289,41 @@ export default function SettingsPage() {
                 })
               )}
             </div>
-            <div className="rounded-2xl border border-dashed bg-muted/20 p-6 text-center"><p className="text-xs text-muted-foreground">دعوة الأعضاء ستكون متاحة قريباً</p></div>
+
+            {invites.length > 0 && (
+              <div>
+                <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground mb-3">ACTIVE INVITES ({invites.length})</h2>
+                <div className="rounded-2xl border bg-card overflow-hidden divide-y">
+                  {invites.map((inv) => {
+                    const link = `${typeof window !== "undefined" ? window.location.origin : ""}/join/${inv.code}`;
+                    return (
+                      <div key={inv.id} className="p-4 space-y-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Link2 className="h-4 w-4 text-muted-foreground shrink-0" />
+                            <span className="font-mono text-xs truncate">{inv.code}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground">
+                              {ROLE_LABELS[inv.role] || inv.role}
+                            </span>
+                            <button onClick={() => handleDeleteInvite(inv.id)} className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <input readOnly value={link} className="flex-1 h-8 rounded-md border border-input bg-muted/30 px-2 text-[11px] font-mono" dir="ltr" />
+                          <Button size="sm" variant="outline" onClick={() => copyLink(link)}>
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -239,7 +349,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">حذف الأكاديمية</p>
-                    <p className="text-xs text-muted-foreground">حذف كل البيانات نهائياً (اللاعبين، الفرق، المباريات...)</p>
+                    <p className="text-xs text-muted-foreground">حذف كل البيانات نهائياً</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => { setDeleteAcademyOpen(true); setDeleteAcademyInput(""); setError(null); }} className="text-destructive border-destructive/40 hover:bg-destructive/10 shrink-0">
                     <Trash2 className="h-3.5 w-3.5" />حذف
@@ -248,7 +358,7 @@ export default function SettingsPage() {
                 <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-4">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">حذف الحساب</p>
-                    <p className="text-xs text-muted-foreground">حذف حسابك وكل الأكاديميات التي تملكها</p>
+                    <p className="text-xs text-muted-foreground">حذف حسابك وكل الأكاديميات</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => { setDeleteAccountOpen(true); setDeleteAccountInput(""); setError(null); }} className="text-destructive border-destructive/40 hover:bg-destructive/10 shrink-0">
                     <LogOut className="h-3.5 w-3.5" />حذف
@@ -260,21 +370,63 @@ export default function SettingsPage() {
         )}
       </div>
 
+      {inviteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => !creatingInvite && closeInviteModal()}>
+          <div className="w-full max-w-md rounded-2xl border bg-card p-6" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start gap-3 mb-4">
+              <div className="rounded-full bg-primary/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
+                <Link2 className="h-5 w-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold">{generatedLink ? "الدعوة جاهزة" : "دعوة عضو جديد"}</h3>
+                <p className="mt-1 text-xs text-muted-foreground">{generatedLink ? "انسخ الرابط وارسله" : "اختر الدور وشارك الرابط"}</p>
+              </div>
+              <button onClick={closeInviteModal} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+            </div>
+            {!generatedLink ? (
+              <>
+                <div className="space-y-2 mb-4">
+                  <Label className="text-xs">الدور</Label>
+                  <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={creatingInvite} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
+                    {INVITE_ROLES.map((r) => (<option key={r} value={r}>{ROLE_LABELS[r] || r}</option>))}
+                  </select>
+                </div>
+                {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
+                <div className="flex gap-2 justify-end">
+                  <Button variant="outline" onClick={closeInviteModal} disabled={creatingInvite}>إلغاء</Button>
+                  <Button onClick={handleCreateInvite} disabled={creatingInvite}>{creatingInvite ? "..." : "إنشاء الدعوة"}</Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="space-y-2 mb-4">
+                  <Label className="text-xs">الرابط</Label>
+                  <div className="flex gap-2">
+                    <input readOnly value={generatedLink} className="flex-1 h-9 rounded-md border border-input bg-muted/30 px-3 text-xs font-mono" dir="ltr" />
+                    <Button size="sm" onClick={() => copyLink(generatedLink)}><Copy className="h-4 w-4" />{copied ? "تم!" : ""}</Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">أرسل هذا الرابط للمدعو. عند فتحه، سينضم تلقائياً للأكاديمية.</p>
+                </div>
+                <div className="flex justify-end"><Button onClick={closeInviteModal}>تم</Button></div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
+
       {deleteAcademyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => !deletingAcademy && setDeleteAcademyOpen(false)}>
           <div className="w-full max-w-md rounded-2xl border bg-card p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-3 mb-4">
-              <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
-                <AlertTriangle className="h-5 w-5 text-destructive" />
-              </div>
+              <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}><AlertTriangle className="h-5 w-5 text-destructive" /></div>
               <div className="flex-1">
                 <h3 className="font-bold">حذف الأكاديمية نهائياً؟</h3>
-                <p className="mt-1 text-xs text-muted-foreground">سيتم حذف كل البيانات (اللاعبين، الفرق، المباريات، الجلسات، الحضور). لا يمكن التراجع.</p>
+                <p className="mt-1 text-xs text-muted-foreground">سيتم حذف كل البيانات.</p>
               </div>
               <button onClick={() => !deletingAcademy && setDeleteAcademyOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-2 mb-4">
-              <Label className="text-xs">اكتب اسم الأكاديمية للتأكيد: <span className="font-mono text-accent">{academy.name}</span></Label>
+              <Label className="text-xs">اكتب اسم الأكاديمية: <span className="font-mono text-accent">{academy.name}</span></Label>
               <Input value={deleteAcademyInput} onChange={(e) => setDeleteAcademyInput(e.target.value)} disabled={deletingAcademy} placeholder={academy.name} />
             </div>
             {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
@@ -292,17 +444,15 @@ export default function SettingsPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm" onClick={() => !deletingAccount && setDeleteAccountOpen(false)}>
           <div className="w-full max-w-md rounded-2xl border bg-card p-6" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-start gap-3 mb-4">
-              <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}>
-                <LogOut className="h-5 w-5 text-destructive" />
-              </div>
+              <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}><LogOut className="h-5 w-5 text-destructive" /></div>
               <div className="flex-1">
                 <h3 className="font-bold">حذف حسابك نهائياً؟</h3>
-                <p className="mt-1 text-xs text-muted-foreground">سيتم حذف حسابك وكل الأكاديميات التي تملكها. لا يمكن التراجع.</p>
+                <p className="mt-1 text-xs text-muted-foreground">سيتم حذف حسابك.</p>
               </div>
               <button onClick={() => !deletingAccount && setDeleteAccountOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-2 mb-4">
-              <Label className="text-xs">اكتب كلمة <span className="font-bold text-destructive">حذف</span> للتأكيد</Label>
+              <Label className="text-xs">اكتب كلمة <span className="font-bold text-destructive">حذف</span></Label>
               <Input value={deleteAccountInput} onChange={(e) => setDeleteAccountInput(e.target.value)} disabled={deletingAccount} placeholder="حذف" />
             </div>
             {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
