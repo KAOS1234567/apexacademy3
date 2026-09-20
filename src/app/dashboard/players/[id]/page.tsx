@@ -7,6 +7,7 @@ import { ArrowRight, Trash2, Save, Upload, X, Users, Edit3, BarChart3, Calendar,
 import { createClient } from "@/lib/supabase/client";
 import { PlayerAttendance } from "@/components/features/PlayerAttendance";
 import { PlayerMatchStats } from "@/components/features/PlayerMatchStats";
+import { PlayerSuspension } from "@/components/features/PlayerSuspension";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -277,6 +278,7 @@ export default function PlayerDetailPage() {
                 <Trophy className="h-4 w-4 text-accent" />
                 <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">MATCH STATS</h2>
               </div>
+              <PlayerSuspension playerId={id} academyId={player?.team_id ? "" : ""} />
               <PlayerMatchStats playerId={id} />
             </section>
 
