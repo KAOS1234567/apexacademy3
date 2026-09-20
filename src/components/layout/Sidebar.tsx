@@ -40,7 +40,6 @@ export function Sidebar({
 
   return (
     <>
-      {/* Overlay - يظهر فقط على الموبايل لما القائمة مفتوحة */}
       {open && (
         <div
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden"
@@ -51,7 +50,6 @@ export function Sidebar({
       <aside
         className={cn(
           "flex h-full w-64 flex-col border-l bg-card transition-transform duration-300",
-          // على الموبايل: sidebar ثابت يطلع/يختفي
           "fixed inset-y-0 right-0 z-50 md:relative md:z-auto",
           open ? "translate-x-0" : "translate-x-full md:translate-x-0"
         )}
@@ -69,6 +67,17 @@ export function Sidebar({
             aria-label="إغلاق"
           >
             <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* زر تسجيل الخروج - فوق القائمة */}
+        <div className="border-b border-border/60 p-3">
+          <button
+            onClick={onLogout}
+            className="flex w-full items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>تسجيل الخروج</span>
           </button>
         </div>
 
@@ -94,16 +103,6 @@ export function Sidebar({
             );
           })}
         </nav>
-
-        <div className="border-t p-3">
-          <button
-            onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
       </aside>
     </>
   );
