@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users, Dumbbell, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function Home() {
@@ -56,21 +57,21 @@ export default function Home() {
       <section id="features" className="container mx-auto px-4 py-16">
         <div className="grid gap-6 md:grid-cols-3">
           <div className="rounded-2xl border bg-card p-6 transition hover:border-primary/50">
-            <div className="mb-4 h-10 w-10 rounded-lg bg-primary/10"></div>
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><Users className="h-5 w-5 text-primary" /></div>
             <h3 className="mb-2 text-lg font-semibold">إدارة اللاعبين</h3>
             <p className="text-sm text-muted-foreground">
               ملف كامل لكل لاعب مع تاريخه وتطوره عبر الزمن.
             </p>
           </div>
           <div className="rounded-2xl border bg-card p-6 transition hover:border-primary/50">
-            <div className="mb-4 h-10 w-10 rounded-lg bg-accent/10"></div>
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-indigo-500/15"><Dumbbell className="h-5 w-5 text-indigo-400" /></div>
             <h3 className="mb-2 text-lg font-semibold">التدريبات والحضور</h3>
             <p className="text-sm text-muted-foreground">
               خطّط التدريبات وسجّل الحضور بسهولة من أي جهاز.
             </p>
           </div>
           <div className="rounded-2xl border bg-card p-6 transition hover:border-primary/50">
-            <div className="mb-4 h-10 w-10 rounded-lg bg-primary/10"></div>
+            <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10"><BarChart3 className="h-5 w-5 text-primary" /></div>
             <h3 className="mb-2 text-lg font-semibold">المباريات والإحصائيات</h3>
             <p className="text-sm text-muted-foreground">
               تابع المباريات وسجّل إحصائيات وتقييمات اللاعبين.
