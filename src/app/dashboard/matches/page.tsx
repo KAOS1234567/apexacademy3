@@ -41,7 +41,7 @@ export default function MatchesPage() {
 
       const { data, error } = await supabase
         .from("matches")
-        .select("id, opponent, match_date, match_time, venue, competition, home_score, away_score, teams(name)")
+        .select("id, opponent, match_date, match_time, venue, competition, home_score, away_score, teams!matches_team_id_fkey(name)")
         .eq("academy_id", members[0].academy_id)
         .order("match_date", { ascending: false });
 

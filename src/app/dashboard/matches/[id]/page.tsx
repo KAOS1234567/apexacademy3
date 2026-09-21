@@ -98,7 +98,7 @@ export default function MatchDetailPage() {
   useEffect(() => {
     async function load() {
       const supabase = createClient();
-      const { data, error } = await supabase.from("matches").select("*, teams(name, logo_url, category)").eq("id", id).single();
+      const { data, error } = await supabase.from("matches").select("*, teams!matches_team_id_fkey(name, logo_url, category)").eq("id", id).single();
       if (error || !data) { setError("المباراة غير موجودة"); setLoading(false); return; }
 
       const m = data as unknown as Match;
