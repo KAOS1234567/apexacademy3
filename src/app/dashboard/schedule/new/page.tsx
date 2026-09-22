@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
@@ -13,6 +13,8 @@ type Team = { id: string; name: string };
 
 export default function NewSessionPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const dateParam = searchParams.get("date");
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(false);
@@ -20,7 +22,7 @@ export default function NewSessionPage() {
 
   const [title, setTitle] = useState("");
   const [teamId, setTeamId] = useState("");
-  const [sessionDate, setSessionDate] = useState("");
+  const [sessionDate, setSessionDate] = useState(dateParam || "");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [location, setLocation] = useState("");

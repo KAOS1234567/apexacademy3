@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Calendar } from "lucide-react";
+import { Plus, Calendar, List as ListIcon } from "lucide-react";
+import { ScheduleCalendar } from "@/components/features/ScheduleCalendar";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 
@@ -16,10 +17,23 @@ type Session = {
   teams: { name: string } | null;
 };
 
+type MatchLite = {
+  id: string;
+  match_date: string;
+  match_time: string | null;
+  opponent: string | null;
+  home_score: number | null;
+  away_score: number | null;
+  league_id: string | null;
+  teams: { name: string } | null;
+};
+
 export default function SchedulePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [sessions, setSessions] = useState<Session[]>([]);
+  const [matches, setMatches] = useState<MatchLite[]>([]);
+  const [view, setView] = useState<"list" | "calendar">("calendar");
 
   useEffect(() => {
     async function load() {
@@ -43,6 +57,14 @@ export default function SchedulePage() {
 
       if (error) { console.error(error); setLoading(false); return; }
       setSessions((data as unknown) as Session[] || []);
+
+      const { data: mData } = await supabase
+        .from("matches")
+        .select("id, match_date, match_time, opponent, home_score, away_score, league_id, teams(name)")
+        .eq("academy_id", members[0].academy_id)
+        .order("match_date", { ascending: false });
+
+      setMatches((mData as unknown) as MatchLite[] || []);
       setLoading(false);
     }
     load();
@@ -63,12 +85,26 @@ export default function SchedulePage() {
           <h1 className="text-2xl font-bold">الجدول</h1>
           <p className="mt-1 text-sm text-muted-foreground">{sessions.length} جلسة</p>
         </div>
+          <div className="flex items-center gap-2">
+            <div className="flex rounded-lg border bg-card p-0.5">
+              <button onClick={() => setView("list")}
+                className={`rounded-md px-3 py-1.5 transition ${view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                <ListIcon className="h-3.5 w-3.5" />
+              </button>
+              <button onClick={() => setView("calendar")}
+                className={`rounded-md px-3 py-1.5 transition ${view === "calendar" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}>
+                <Calendar className="h-3.5 w-3.5" />
+              </button>
+            </div>
         <Link href="/dashboard/schedule/new">
           <Button><Plus className="h-4 w-4" />جلسة جديدة</Button>
         </Link>
+          </div>
       </div>
 
-      {sessions.length === 0 ? (
+      {view === "calendar" && sessions.length > 0 ? (
+        <ScheduleCalendar sessions={sessions} matches={matches} />
+      ) : sessions.length === 0 ? (
         <div className="rounded-2xl border border-dashed bg-muted/20 p-12 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
             <Calendar className="h-6 w-6 text-muted-foreground" />
