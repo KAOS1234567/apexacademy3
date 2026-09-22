@@ -126,6 +126,11 @@ export function ScheduleCalendar({
             return `${h}:${mStr} ${suffix}`;
           })() : "";
 
+          const firstTeamName =
+            bucket.sessions[0]?.teams?.name ||
+            bucket.matches[0]?.teams?.name ||
+            "";
+
           let cellCls = "min-h-[90px] md:min-h-[110px] rounded-xl border text-xs font-medium transition flex flex-col items-center justify-center gap-1 py-1.5 ";
           if (past) {
             cellCls += "border-border/30 bg-background/30 text-muted-foreground/40 cursor-not-allowed";
@@ -151,9 +156,19 @@ export function ScheduleCalendar({
               <span className={`text-lg leading-none ${isToday ? "font-bold" : ""}`}>{d}</span>
               {hasItems && (
                 <>
+                  {firstTeamName && (
+                    <span className="max-w-full truncate text-[9px] leading-tight text-foreground font-medium">
+                      {firstTeamName}
+                    </span>
+                  )}
+                  {firstTime && (
+                    <span className="text-[10px] leading-none text-muted-foreground font-semibold">
+                      {firstTime}
+                    </span>
+                  )}
                   <div className="flex items-center justify-center gap-0.5">
                     {bucket.sessions.length > 0 && (
-                      <span className="text-xl leading-none">
+                      <span className="text-base leading-none">
                         {(() => {
                           const t = bucket.sessions[0].session_type;
                           if (t === "match") return "🏆";
@@ -165,17 +180,12 @@ export function ScheduleCalendar({
                       </span>
                     )}
                     {bucket.matches.some(m => m.league_id) && (
-                      <span className="text-xl leading-none">🏆</span>
+                      <span className="text-base leading-none">🏆</span>
                     )}
                     {bucket.matches.some(m => !m.league_id) && (
-                      <span className="text-xl leading-none">⚽</span>
+                      <span className="text-base leading-none">⚽</span>
                     )}
                   </div>
-                  {firstTime && (
-                    <span className="text-[11px] leading-none text-muted-foreground font-semibold">
-                      {firstTime}
-                    </span>
-                  )}
                 </>
               )}
             </button>
