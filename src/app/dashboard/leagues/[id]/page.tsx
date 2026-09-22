@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import {
-  ArrowRight, Medal, Trophy, Users, Plus, X, Shield, Globe, Building2, Calendar as CalIcon,
+  ArrowRight, Medal, Trophy, Users, Plus, X, Shield, Globe, Building2, Calendar as CalIcon, Pencil, Trash2,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -60,6 +60,9 @@ export default function LeagueDetailPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"standings" | "matches" | "teams">("standings");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const loadAll = useCallback(async (academyId: string) => {
     const supabase = createClient();
@@ -155,6 +158,27 @@ export default function LeagueDetailPage() {
     closeMenu(); setBusy(false);
   }
 
+  async function handleDeleteLeague() {
+    if (!league) return;
+    if (deleteConfirmText.trim() !== league.name.trim()) {
+      setError("اسم الدوري غير مطابق");
+      return;
+    }
+    setDeleting(true);
+    setError("");
+    const supabase = createClient();
+    const { error: delError } = await supabase
+      .from("leagues")
+      .delete()
+      .eq("id", league.id);
+    if (delError) {
+      setError(delError.message);
+      setDeleting(false);
+      return;
+    }
+    router.push("/dashboard/leagues");
+  }
+
   async function handleRemoveTeam(ltId: string) {
     if (!league) return;
     setBusy(true);
@@ -215,9 +239,17 @@ export default function LeagueDetailPage() {
               {` • ${league.legs === 2 ? "ذهاب وإياب" : "ذهاب فقط"}`}
             </p>
           </div>
-          <span className={`rounded-full px-3 py-1 text-xs ${STATUS_COLORS[league.status] || "bg-muted"}`}>
-            {STATUS_LABELS[league.status] || league.status}
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`rounded-full px-3 py-1 text-xs ${STATUS_COLORS[league.status] || "bg-muted"}`}>
+              {STATUS_LABELS[league.status] || league.status}
+            </span>
+            <Link href={`/dashboard/leagues/${league.id}/edit`}>
+              <Button variant="outline" size="sm">
+                <Pencil className="h-4 w-4" /> تعديل
+              </Button>
+            </Link>
+
+          </div>
         </div>
       </div>
 
