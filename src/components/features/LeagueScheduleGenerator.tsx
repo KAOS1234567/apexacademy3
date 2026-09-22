@@ -37,7 +37,7 @@ export function LeagueScheduleGenerator({
     d.setDate(d.getDate() + 7);
     return d.toISOString().split("T")[0];
   });
-  const [intervalDays, setIntervalDays] = useState(7);
+  const [intervalInput, setIntervalInput] = useState("7");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -84,6 +84,7 @@ export function LeagueScheduleGenerator({
       for (const round of rounds) {
         globalRound++;
         const roundDate = new Date(start);
+        const intervalDays = parseInt(intervalInput, 10) || 7;
         roundDate.setDate(roundDate.getDate() + (globalRound - 1) * intervalDays);
         const dateStr = roundDate.toISOString().split("T")[0];
 
@@ -143,8 +144,10 @@ export function LeagueScheduleGenerator({
             <div>
               <Label htmlFor="interval">أيام بين الجولات</Label>
               <Input
-                id="interval" type="number" min={1} max={30} value={intervalDays}
-                onChange={(e) => setIntervalDays(Number(e.target.value) || 7)} disabled={busy}
+                id="interval" type="number" min={1} max={30} value={intervalInput}
+                onChange={(e) => setIntervalInput(e.target.value)}
+                onBlur={() => { if (!intervalInput || parseInt(intervalInput, 10) < 1) setIntervalInput("7"); }}
+                disabled={busy}
               />
             </div>
           </div>

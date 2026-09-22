@@ -9,6 +9,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LeagueScheduleGenerator } from "@/components/features/LeagueScheduleGenerator";
 import { LeagueStandings } from "@/components/features/LeagueStandings";
 
@@ -60,6 +61,29 @@ export default function LeagueDetailPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [activeTab, setActiveTab] = useState<"standings" | "matches" | "teams">("standings");
+  const [scoringMatch, setScoringMatch] = useState<Match | null>(null);
+  const [homeScoreInput, setHomeScoreInput] = useState("");
+  const [awayScoreInput, setAwayScoreInput] = useState("");
+  const [savingScore, setSavingScore] = useState(false);
+  const [scoreError, setScoreError] = useState("");
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const t = params.get("tab");
+    if (t === "matches" || t === "teams" || t === "standings") {
+      setActiveTab(t);
+    }
+  }, []);
+
+  function changeTab(tab: "standings" | "matches" | "teams") {
+    setActiveTab(tab);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("tab", tab);
+      window.history.replaceState(null, "", url.toString());
+    }
+  }
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -179,6 +203,38 @@ export default function LeagueDetailPage() {
     router.push("/dashboard/leagues");
   }
 
+  function openScoreDialog(m: Match) {
+    setScoringMatch(m);
+    setHomeScoreInput(m.home_score !== null ? String(m.home_score) : "");
+    setAwayScoreInput(m.away_score !== null ? String(m.away_score) : "");
+    setScoreError("");
+  }
+
+  async function handleSaveScore() {
+    if (!scoringMatch || !league) return;
+    const h = parseInt(homeScoreInput, 10);
+    const a = parseInt(awayScoreInput, 10);
+    if (isNaN(h) || isNaN(a) || h < 0 || a < 0) {
+      setScoreError("أدخل أرقامًا صحيحة (0 أو أكثر)");
+      return;
+    }
+    setSavingScore(true);
+    setScoreError("");
+    const supabase = createClient();
+    const { error: upErr } = await supabase
+      .from("matches")
+      .update({ home_score: h, away_score: a })
+      .eq("id", scoringMatch.id);
+    if (upErr) {
+      setScoreError(upErr.message);
+      setSavingScore(false);
+      return;
+    }
+    await loadAll(league.academy_id);
+    setScoringMatch(null);
+    setSavingScore(false);
+  }
+
   async function handleRemoveTeam(ltId: string) {
     if (!league) return;
     setBusy(true);
@@ -260,7 +316,7 @@ export default function LeagueDetailPage() {
 
       <div className="mb-6 flex gap-1 overflow-x-auto rounded-full border bg-card p-1">
         <button
-          onClick={() => setActiveTab("standings")}
+          onClick={() => changeTab("standings")}
           className={`flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
             activeTab === "standings"
               ? "border-2 border-primary bg-background text-foreground"
@@ -270,7 +326,7 @@ export default function LeagueDetailPage() {
           الترتيب
         </button>
         <button
-          onClick={() => setActiveTab("matches")}
+          onClick={() => changeTab("matches")}
           className={`flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
             activeTab === "matches"
               ? "border-2 border-primary bg-background text-foreground"
@@ -280,7 +336,7 @@ export default function LeagueDetailPage() {
           المباريات
         </button>
         <button
-          onClick={() => setActiveTab("teams")}
+          onClick={() => changeTab("teams")}
           className={`flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
             activeTab === "teams"
               ? "border-2 border-primary bg-background text-foreground"
@@ -360,9 +416,19 @@ export default function LeagueDetailPage() {
                             <span className="text-sm font-medium">{awayName}</span>
                           </div>
                         </div>
-                        <div className="mt-2 text-center text-[11px] text-muted-foreground">
-                          {m.match_date}
-                          {m.match_time && ` • ${m.match_time.slice(0, 5)}`}
+                        <div className="mt-2 flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); e.stopPropagation(); openScoreDialog(m); }}
+                            className="shrink-0 rounded-lg p-1 text-muted-foreground transition hover:bg-primary/10 hover:text-primary"
+                            title="إدخال النتيجة"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <div className="flex-1 text-center text-[11px] text-muted-foreground">
+                            {m.match_date}
+                            {m.match_time && ` • ${m.match_time.slice(0, 5)}`}
+                          </div>
                         </div>
                       </Link>
                     );
@@ -506,6 +572,50 @@ export default function LeagueDetailPage() {
           </div>
         )}
       </div>
+      )}
+      {scoringMatch && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !savingScore && setScoringMatch(null)}>
+          <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-xl"
+            onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-4 font-semibold">إدخال نتيجة المباراة</h3>
+
+            <div className="mb-4 grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="hs" className="mb-1 block truncate text-center text-xs">
+                  {scoringMatch.home_team?.name || scoringMatch.home_ext?.name || "المضيف"}
+                </Label>
+                <Input id="hs" type="number" min={0} value={homeScoreInput}
+                  onChange={(e) => setHomeScoreInput(e.target.value)}
+                  disabled={savingScore} className="text-center" />
+              </div>
+              <div>
+                <Label htmlFor="as" className="mb-1 block truncate text-center text-xs">
+                  {scoringMatch.away_team?.name || scoringMatch.away_ext?.name || scoringMatch.opponent || "الضيف"}
+                </Label>
+                <Input id="as" type="number" min={0} value={awayScoreInput}
+                  onChange={(e) => setAwayScoreInput(e.target.value)}
+                  disabled={savingScore} className="text-center" />
+              </div>
+            </div>
+
+            {scoreError && (
+              <div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2 text-xs text-destructive">
+                {scoreError}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <Button onClick={handleSaveScore} disabled={savingScore} className="flex-1">
+                {savingScore ? "جاري الحفظ..." : "حفظ"}
+              </Button>
+              <Button variant="outline" onClick={() => setScoringMatch(null)}
+                disabled={savingScore}>
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

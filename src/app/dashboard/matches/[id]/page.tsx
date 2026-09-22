@@ -202,7 +202,7 @@ export default function MatchDetailPage() {
   return (
     <div className="p-6 md:p-10">
       <div className="mx-auto max-w-3xl">
-        <Link href={match?.league_id ? `/dashboard/leagues/${match.league_id}` : "/dashboard/matches"} className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+        <Link href={match?.league_id ? `/dashboard/leagues/${match.league_id}?tab=matches` : "/dashboard/matches"} className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
           <ArrowRight className="h-4 w-4" />رجوع للمباريات
         </Link>
 
