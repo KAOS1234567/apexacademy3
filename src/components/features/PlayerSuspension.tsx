@@ -19,7 +19,7 @@ const REASON_LABELS: Record<string, string> = {
   other: "أخرى",
 };
 
-export function PlayerSuspension({ playerId, academyId }: { playerId: string; academyId: string }) {
+export function PlayerSuspension({ playerId }: { playerId: string }) {
   const [loading, setLoading] = useState(true);
   const [suspensions, setSuspensions] = useState<Suspension[]>([]);
 

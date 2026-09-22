@@ -278,7 +278,7 @@ export default function PlayerDetailPage() {
                 <Trophy className="h-4 w-4 text-accent" />
                 <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground">MATCH STATS</h2>
               </div>
-              <PlayerSuspension playerId={id} academyId={player?.team_id ? "" : ""} />
+                <PlayerSuspension playerId={id} />
               <PlayerMatchStats playerId={id} />
             </section>
 
