@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter, useParams } from "next/navigation";
 import {
-  ArrowRight, Medal, Trophy, Users, Plus, X, Shield, Globe, Building2, Calendar as CalIcon, Pencil, Trash2,
+  ArrowRight, Medal, Trophy, Users, Plus, X, Shield, Globe, Building2, Calendar as CalIcon, Pencil, Printer,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -248,6 +248,11 @@ export default function LeagueDetailPage() {
                 <Pencil className="h-4 w-4" /> تعديل
               </Button>
             </Link>
+            <a href={`/print/league/${league.id}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">
+                <Printer className="h-4 w-4" /> PDF
+              </Button>
+            </a>
 
           </div>
         </div>
