@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Plus, Calendar, List as ListIcon } from "lucide-react";
+import { Plus, Calendar, List as ListIcon, Printer } from "lucide-react";
 import { ScheduleCalendar } from "@/components/features/ScheduleCalendar";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -97,6 +97,9 @@ export default function SchedulePage() {
                 <Calendar className="h-3.5 w-3.5" />
               </button>
             </div>
+        <a href="/print/schedule" target="_blank" rel="noopener noreferrer">
+          <Button variant="outline"><Printer className="h-4 w-4" /> PDF</Button>
+        </a>
         <Link href="/dashboard/schedule/new">
           <Button><Plus className="h-4 w-4" />جلسة جديدة</Button>
         </Link>
