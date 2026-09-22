@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ChevronRight, ChevronLeft, X, MapPin, Clock } from "lucide-react";
 
@@ -204,7 +205,11 @@ export function ScheduleCalendar({
                   {selected.matches.map(m => {
                     const hasScore = m.home_score !== null && m.away_score !== null;
                     return (
-                      <div key={m.id} className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs space-y-1">
+                      <Link
+                        key={m.id}
+                        href={`/dashboard/matches/${m.id}`}
+                        className="block rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs space-y-1 transition hover:border-amber-500/60 hover:bg-amber-500/10"
+                      >
                         <div className="font-medium">
                           {m.teams?.name || "مباراة"} <span className="text-muted-foreground">ضد</span> {m.opponent || "—"}
                         </div>
@@ -218,7 +223,7 @@ export function ScheduleCalendar({
                             {m.home_score} - {m.away_score}
                           </div>
                         )}
-                      </div>
+                      </Link>
                     );
                   })}
                 </div>
@@ -232,7 +237,11 @@ export function ScheduleCalendar({
                 </div>
                 <div className="space-y-2">
                   {selected.sessions.map(s => (
-                    <div key={s.id} className="rounded-lg border bg-background p-3 text-xs space-y-1">
+                    <Link
+                      key={s.id}
+                      href={`/dashboard/schedule/${s.id}/edit`}
+                      className="block rounded-lg border bg-background p-3 text-xs space-y-1 transition hover:border-primary/50 hover:bg-muted/30"
+                    >
                       <div className="font-medium">{s.title || s.teams?.name || "تدريب"}</div>
                       {s.teams?.name && s.title && (
                         <div className="text-muted-foreground">الفريق: {s.teams.name}</div>
@@ -247,7 +256,7 @@ export function ScheduleCalendar({
                           <MapPin className="h-3 w-3" /> {s.location}
                         </div>
                       )}
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
