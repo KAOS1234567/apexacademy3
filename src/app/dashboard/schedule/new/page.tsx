@@ -21,6 +21,7 @@ export default function NewSessionPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
+  const [sessionType, setSessionType] = useState("training");
   const [teamId, setTeamId] = useState("");
   const [sessionDate, setSessionDate] = useState(dateParam || "");
   const [startTime, setStartTime] = useState("");
@@ -68,6 +69,7 @@ export default function NewSessionPage() {
       academy_id: academyId,
       team_id: teamId || null,
       title: title.trim() || null,
+        session_type: sessionType,
       session_date: sessionDate,
       start_time: startTime || null,
       end_time: endTime || null,
@@ -118,6 +120,36 @@ export default function NewSessionPage() {
               <Label htmlFor="title">عنوان الجلسة</Label>
               <Input id="title" placeholder="مثال: تدريب لياقة" value={title} onChange={(e) => setTitle(e.target.value)} disabled={loading} />
             </div>
+          <div className="space-y-2">
+            <Label>نوع الجلسة *</Label>
+            <div className="grid grid-cols-5 gap-2">
+              {[
+                { v: "training", e: "🎯", l: "تدريب" },
+                { v: "match",    e: "🏆", l: "مباراة" },
+                { v: "cup",      e: "🏅", l: "كأس"   },
+                { v: "rest",     e: "💤", l: "راحة"  },
+                { v: "meeting",  e: "📋", l: "اجتماع" },
+              ].map((opt) => {
+                const active = sessionType === opt.v;
+                return (
+                  <button
+                    key={opt.v}
+                    type="button"
+                    onClick={() => setSessionType(opt.v)}
+                    disabled={loading}
+                    className={`flex flex-col items-center justify-center gap-1 rounded-xl border-2 px-1 py-2.5 text-[11px] font-medium transition ${
+                      active
+                        ? "border-primary bg-primary/10 text-primary shadow-sm"
+                        : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:bg-muted/50"
+                    } disabled:opacity-50`}
+                  >
+                    <span className="text-xl leading-none">{opt.e}</span>
+                    <span className="leading-none">{opt.l}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">

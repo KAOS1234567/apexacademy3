@@ -14,6 +14,7 @@ type Session = {
   session_date: string;
   start_time: string | null;
   location: string | null;
+  session_type: string | null;
   teams: { name: string } | null;
 };
 
@@ -51,7 +52,7 @@ export default function SchedulePage() {
 
       const { data, error } = await supabase
         .from("training_sessions")
-        .select("id, title, session_date, start_time, location, teams(name)")
+        .select("id, title, session_date, start_time, location, session_type, teams(name)")
         .eq("academy_id", members[0].academy_id)
         .order("session_date", { ascending: false });
 

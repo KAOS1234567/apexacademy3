@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, ChevronLeft, X, MapPin, Clock, Trophy, Target } from "lucide-react";
+import { ChevronRight, ChevronLeft, X, MapPin, Clock } from "lucide-react";
 
 type Session = {
   id: string;
@@ -10,6 +10,7 @@ type Session = {
   session_date: string;
   start_time: string | null;
   location: string | null;
+  session_type: string | null;
   teams: { name: string } | null;
 };
 
@@ -82,7 +83,7 @@ export function ScheduleCalendar({
   const hasSelection = selected.sessions.length + selected.matches.length > 0;
 
   return (
-    <div className="rounded-2xl border bg-card p-3">
+    <div className="rounded-2xl border bg-card p-4">
       <div className="mb-3 flex items-center justify-between">
         <button onClick={() => setCursor(new Date(year, month - 1, 1))}
           className="rounded-lg p-2 transition hover:bg-muted">
@@ -95,11 +96,11 @@ export function ScheduleCalendar({
         </button>
       </div>
 
-      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] text-muted-foreground">
+      <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-xs text-muted-foreground">
         {AR_DAYS.map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
 
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {cells.map((d, i) => {
           if (d === null) return <div key={i} className="aspect-square" />;
           const key = dateKey(d);
@@ -110,7 +111,21 @@ export function ScheduleCalendar({
           const hasItems = total > 0;
           const clickable = !past;
 
-          let cellCls = "aspect-square rounded-lg border text-xs font-medium transition flex flex-col items-center justify-center gap-0.5 ";
+          const times = [
+            ...bucket.sessions.map(s => s.start_time).filter(Boolean),
+            ...bucket.matches.map(m => m.match_time).filter(Boolean),
+          ].sort();
+          const firstTime = times.length > 0 ? (() => {
+            const t = times[0] as string;
+            const [hStr, mStr] = t.split(":");
+            let h = parseInt(hStr, 10);
+            const suffix = h >= 12 ? "م" : "ص";
+            if (h === 0) h = 12;
+            else if (h > 12) h = h - 12;
+            return `${h}:${mStr} ${suffix}`;
+          })() : "";
+
+          let cellCls = "min-h-[90px] md:min-h-[110px] rounded-xl border text-xs font-medium transition flex flex-col items-center justify-center gap-1 py-1.5 ";
           if (past) {
             cellCls += "border-border/30 bg-background/30 text-muted-foreground/40 cursor-not-allowed";
           } else if (isToday) {
@@ -132,19 +147,35 @@ export function ScheduleCalendar({
               }}
               className={cellCls}
             >
-              <span className={`text-sm leading-none ${isToday ? "font-bold" : ""}`}>{d}</span>
+              <span className={`text-lg leading-none ${isToday ? "font-bold" : ""}`}>{d}</span>
               {hasItems && (
-                <div className="mt-0.5 flex items-center gap-0.5">
-                  {bucket.sessions.length > 0 && (
-                    <span className="text-[11px] leading-none">🎯</span>
+                <>
+                  <div className="flex items-center justify-center gap-0.5">
+                    {bucket.sessions.length > 0 && (
+                      <span className="text-xl leading-none">
+                        {(() => {
+                          const t = bucket.sessions[0].session_type;
+                          if (t === "match") return "🏆";
+                          if (t === "cup") return "🏅";
+                          if (t === "rest") return "💤";
+                          if (t === "meeting") return "📋";
+                          return "🎯";
+                        })()}
+                      </span>
+                    )}
+                    {bucket.matches.some(m => m.league_id) && (
+                      <span className="text-xl leading-none">🏆</span>
+                    )}
+                    {bucket.matches.some(m => !m.league_id) && (
+                      <span className="text-xl leading-none">⚽</span>
+                    )}
+                  </div>
+                  {firstTime && (
+                    <span className="text-[11px] leading-none text-muted-foreground font-semibold">
+                      {firstTime}
+                    </span>
                   )}
-                  {bucket.matches.some(m => m.league_id) && (
-                    <span className="text-[11px] leading-none">🏆</span>
-                  )}
-                  {bucket.matches.some(m => !m.league_id) && (
-                    <span className="text-[11px] leading-none">⚽</span>
-                  )}
-                </div>
+                </>
               )}
             </button>
           );
@@ -167,7 +198,7 @@ export function ScheduleCalendar({
             {selected.matches.length > 0 && (
               <div className="mb-3">
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-amber-500">
-                  <span className="text-[11px] leading-none">🏆</span> المباريات
+                  🏆 المباريات
                 </div>
                 <div className="space-y-2">
                   {selected.matches.map(m => {
@@ -197,7 +228,7 @@ export function ScheduleCalendar({
             {selected.sessions.length > 0 && (
               <div>
                 <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-primary">
-                  <span className="text-[11px] leading-none">🎯</span> التدريبات
+                  🎯 التدريبات
                 </div>
                 <div className="space-y-2">
                   {selected.sessions.map(s => (
