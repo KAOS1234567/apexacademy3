@@ -84,7 +84,7 @@ export function ScheduleCalendar({
   const hasSelection = selected.sessions.length + selected.matches.length > 0;
 
   return (
-    <div className="rounded-2xl border bg-card p-4">
+    <div className="mx-auto w-full max-w-full md:max-w-[800px] rounded-2xl border bg-card p-2 md:p-4">
       <div className="mb-3 flex items-center justify-between">
         <button onClick={() => setCursor(new Date(year, month - 1, 1))}
           className="rounded-lg p-2 transition hover:bg-muted">
@@ -97,11 +97,11 @@ export function ScheduleCalendar({
         </button>
       </div>
 
-      <div className="mb-2 grid grid-cols-7 gap-1.5 text-center text-xs text-muted-foreground">
+      <div className="mb-1 md:mb-2 grid grid-cols-7 gap-1 md:gap-1.5 text-center text-[9px] md:text-xs text-muted-foreground">
         {AR_DAYS.map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className="grid grid-cols-7 gap-1 md:gap-1.5">
         {cells.map((d, i) => {
           if (d === null) return <div key={i} className="aspect-square" />;
           const key = dateKey(d);
@@ -131,7 +131,7 @@ export function ScheduleCalendar({
             bucket.matches[0]?.teams?.name ||
             "";
 
-          let cellCls = "min-h-[90px] md:min-h-[110px] rounded-xl border text-xs font-medium transition flex flex-col items-center justify-center gap-1 py-1.5 ";
+          let cellCls = "min-h-[54px] sm:min-h-[70px] md:min-h-0 md:aspect-[5/6] rounded-lg md:rounded-xl border font-medium transition flex flex-col items-center justify-center gap-0.5 md:gap-1 px-0.5 py-1 md:py-1.5 overflow-hidden";
           if (past) {
             cellCls += "border-border/30 bg-background/30 text-muted-foreground/40 cursor-not-allowed";
           } else if (isToday) {
@@ -153,22 +153,22 @@ export function ScheduleCalendar({
               }}
               className={cellCls}
             >
-              <span className={`text-lg leading-none ${isToday ? "font-bold" : ""}`}>{d}</span>
+              <span className={`text-sm sm:text-base md:text-2xl leading-none ${isToday ? "font-bold" : ""}`}>{d}</span>
               {hasItems && (
                 <>
                   {firstTeamName && (
-                    <span className="max-w-full truncate text-[9px] leading-tight text-foreground font-medium">
+                    <span className="max-w-full truncate text-[7px] sm:text-[8px] md:text-[9px] leading-tight text-foreground font-medium">
                       {firstTeamName}
                     </span>
                   )}
                   {firstTime && (
-                    <span className="text-[10px] leading-none text-muted-foreground font-semibold">
+                    <span className="text-[8px] sm:text-[9px] md:text-[10px] leading-none text-muted-foreground font-semibold">
                       {firstTime}
                     </span>
                   )}
                   <div className="flex items-center justify-center gap-0.5">
                     {bucket.sessions.length > 0 && (
-                      <span className="text-base leading-none">
+                      <span className="text-sm sm:text-base md:text-2xl leading-none">
                         {(() => {
                           const t = bucket.sessions[0].session_type;
                           if (t === "match") return "🏆";
@@ -180,10 +180,10 @@ export function ScheduleCalendar({
                       </span>
                     )}
                     {bucket.matches.some(m => m.league_id) && (
-                      <span className="text-base leading-none">🏆</span>
+                      <span className="text-sm sm:text-base md:text-2xl leading-none">🏆</span>
                     )}
                     {bucket.matches.some(m => !m.league_id) && (
-                      <span className="text-base leading-none">⚽</span>
+                      <span className="text-sm sm:text-base md:text-2xl leading-none">⚽</span>
                     )}
                   </div>
                 </>
