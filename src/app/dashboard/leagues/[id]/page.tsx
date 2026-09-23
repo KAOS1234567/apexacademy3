@@ -235,6 +235,15 @@ export default function LeagueDetailPage() {
     setSavingScore(false);
   }
 
+  async function handleChangeGroup(ltId: string, groupName: string | null) {
+    if (!league) return;
+    setBusy(true);
+    const supabase = createClient();
+    await supabase.from("league_teams").update({ group_name: groupName }).eq("id", ltId);
+    await loadAll(league.academy_id);
+    setBusy(false);
+  }
+
   async function handleRemoveTeam(ltId: string) {
     if (!league) return;
     setBusy(true);
@@ -561,6 +570,31 @@ export default function LeagueDetailPage() {
                     </div>
                     {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
                   </div>
+                  {league.format === "groups" && (
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {[
+                        { v: "A", cls: "bg-blue-500/20 text-blue-400 border-blue-500/40" },
+                        { v: "B", cls: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40" },
+                        { v: "C", cls: "bg-purple-500/20 text-purple-400 border-purple-500/40" },
+                        { v: "D", cls: "bg-orange-500/20 text-orange-400 border-orange-500/40" },
+                      ].map((g) => {
+                        const active = (lt.group_name || "A") === g.v;
+                        return (
+                          <button
+                            key={g.v}
+                            onClick={() => handleChangeGroup(lt.id, g.v)}
+                            disabled={busy}
+                            title={`المجموعة ${g.v}`}
+                            className={`flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-full border text-[10px] md:text-xs font-bold transition ${
+                              active ? g.cls : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                            } disabled:opacity-50`}
+                          >
+                            {g.v}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
                   <button onClick={() => handleRemoveTeam(lt.id)} disabled={busy}
                     className="shrink-0 rounded-lg p-2 text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
                     title="إزالة">
