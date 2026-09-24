@@ -3,8 +3,17 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Users, Shield, Dumbbell, Calendar, Trophy,
-  BarChart3, Settings, LogOut, X, Medal,
+  LayoutDashboard,
+  Users,
+  Shield,
+  Dumbbell,
+  Calendar,
+  Trophy,
+  BarChart3,
+  Settings,
+  LogOut,
+  X,
+  Medal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -21,12 +30,13 @@ const nav = [
 ];
 
 export function Sidebar({
-  onLogout, open, onClose, isRTL,
+  onLogout,
+  open,
+  onClose,
 }: {
   onLogout: () => void;
   open: boolean;
   onClose: () => void;
-  isRTL: boolean;
 }) {
   const pathname = usePathname();
 
@@ -40,12 +50,15 @@ export function Sidebar({
       )}
 
       <aside
-        data-open={open ? "true" : "false"}
-        className="app-sidebar fixed inset-y-0 z-50 flex h-full w-64 shrink-0 flex-col bg-card transition-transform duration-300 md:relative md:translate-x-0"
+        className={cn(
+          "flex h-full w-64 flex-col border-l bg-card transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-50 md:relative md:z-auto",
+          open ? "translate-x-0" : "translate-x-full md:translate-x-0"
+        )}
       >
         <div className="flex h-16 items-center justify-between border-b px-5">
           <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-sm font-bold text-primary-foreground">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent text-accent-foreground font-bold">
               A
             </div>
             <span className="text-lg font-bold">Campo</span>
@@ -55,7 +68,18 @@ export function Sidebar({
             className="rounded-lg p-1.5 text-muted-foreground hover:bg-muted md:hidden"
             aria-label="إغلاق"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        {/* زر تسجيل الخروج - فوق القائمة */}
+        <div className="border-b border-border/60 p-3">
+          <button
+            onClick={onLogout}
+            className="flex w-full items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>تسجيل الخروج</span>
           </button>
         </div>
 
@@ -81,16 +105,6 @@ export function Sidebar({
             );
           })}
         </nav>
-
-        <div className="border-t p-3">
-          <button
-            onClick={onLogout}
-            className="flex w-full items-center gap-3 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
-          >
-            <LogOut className="h-4 w-4" />
-            <span>تسجيل الخروج</span>
-          </button>
-        </div>
       </aside>
     </>
   );

@@ -406,36 +406,3 @@
   .no-print { display: none !important; }
   @page { margin: 0 !important; size: A4 !important; }
 }
-
-
-/* === Sidebar RTL/LTR forced positioning === */
-html[dir="rtl"] .app-sidebar {
-  right: 0;
-  left: auto;
-  border-left-width: 1px;
-  border-right-width: 0;
-}
-html[dir="ltr"] .app-sidebar {
-  left: 0;
-  right: auto;
-  border-right-width: 1px;
-  border-left-width: 0;
-}
-html[dir="rtl"] .app-sidebar[data-open="false"] {
-  transform: translateX(100%);
-}
-html[dir="ltr"] .app-sidebar[data-open="false"] {
-  transform: translateX(-100%);
-}
-html[dir="rtl"] .app-sidebar[data-open="true"],
-html[dir="ltr"] .app-sidebar[data-open="true"] {
-  transform: translateX(0);
-}
-@media (min-width: 768px) {
-  html[dir="rtl"] .app-sidebar,
-  html[dir="ltr"] .app-sidebar {
-    position: relative;
-    inset: auto;
-    transform: none !important;
-  }
-}
