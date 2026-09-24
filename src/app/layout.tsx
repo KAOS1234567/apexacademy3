@@ -1,12 +1,8 @@
 import type { Metadata } from "next";
-import { IBM_Plex_Sans_Arabic, Playfair_Display } from "next/font/google";
+import { IBM_Plex_Sans_Arabic } from "next/font/google";
+import { getLocale } from "@/i18n/config";
+import { getDirection } from "@/i18n/dictionaries";
 import "./globals.css";
-
-const playfair = Playfair_Display({
-  variable: "--font-playfair",
-  subsets: ["latin"],
-  display: "swap",
-});
 
 const plexArabic = IBM_Plex_Sans_Arabic({
   variable: "--font-plex-arabic",
@@ -17,16 +13,19 @@ const plexArabic = IBM_Plex_Sans_Arabic({
 
 export const metadata: Metadata = {
   title: "Campo",
-  description: "نظام إدارة أكاديميات كرة القدم",
+  description: "Football Academy Management SaaS",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const locale = await getLocale();
+  const dir = getDirection(locale);
+
   return (
-    <html lang="ar" dir="rtl" className={`dark ${plexArabic.variable} ${playfair.variable}`}>
+    <html lang={locale} dir={dir} className={`dark ${plexArabic.variable}`} suppressHydrationWarning>
       <body className="antialiased">
         {children}
       </body>
