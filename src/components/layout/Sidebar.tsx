@@ -7,7 +7,6 @@ import {
   Trophy, BarChart3, Settings, LogOut, X, Medal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { LanguageToggle } from "./LanguageToggle";
 
 const nav = [
   { href: "/dashboard", label: "الرئيسية", icon: LayoutDashboard, key: "home" },
@@ -92,9 +91,6 @@ export function Sidebar({
           })}
         </nav>
 
-        <div className="border-t border-border/60 p-3">
-          <LanguageToggle current={locale} />
-        </div>
       </aside>
     </>
   );

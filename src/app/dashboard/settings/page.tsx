@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Save, Settings as SettingsIcon, Users, Shield, Building2, Crown, Dumbbell, User as UserIcon, AlertTriangle, Trash2, X, LogOut, Link2, Copy, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useDict } from "@/i18n/DictProvider";
+import { LanguageToggle } from "@/components/layout/LanguageToggle";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +40,7 @@ export default function SettingsPage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [tab, setTab] = useState<Tab>("general");
+  const { locale } = useDict();
 
   const [name, setName] = useState("");
   const [country, setCountry] = useState("");
@@ -249,6 +252,11 @@ export default function SettingsPage() {
               </div>
             </div>
             {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
+            <div className="space-y-4 rounded-2xl border bg-card p-6">
+              <h2 className="text-sm font-semibold text-muted-foreground">اللغة / Language</h2>
+              <LanguageToggle current={locale} />
+            </div>
+
             {success && (<div className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm text-emerald-500">تم حفظ التعديلات بنجاح</div>)}
             <div className="flex gap-3"><Button type="submit" disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</Button></div>
           </form>
