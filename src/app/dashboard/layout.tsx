@@ -1,33 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Menu } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Sidebar } from "@/components/layout/Sidebar";
+import { useDict } from "@/i18n/DictProvider";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [locale, setLocale] = useState("ar");
-  const [dict, setDict] = useState<{ nav: Record<string, string>; common: Record<string, string> } | null>(null);
-
-  useEffect(() => {
-    fetch("/api/locale")
-      .then((r) => r.json())
-      .then((d) => { setLocale(d.locale); setDict(d.dict); })
-      .catch(() => {});
-  }, []);
+  const { locale, dict } = useDict();
 
   async function handleLogout() {
     const supabase = createClient();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
-  }
-
-  if (!dict) {
-    return <div className="flex h-screen items-center justify-center"><p className="text-sm text-muted-foreground">···</p></div>;
   }
 
   return (
@@ -44,7 +33,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span className="font-bold">{dict.common.appName}</span>
           </div>
         </div>
-
         <main className="flex-1 overflow-y-auto">{children}</main>
       </div>
     </div>

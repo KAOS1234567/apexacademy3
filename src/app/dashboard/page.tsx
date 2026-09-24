@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { useDict } from "@/i18n/DictProvider";
 
 type Academy = { id: string; name: string; country: string | null; city: string | null };
 type Membership = { role: string; academies: Academy };
@@ -14,10 +15,32 @@ type Activity = { id: string; type: string; label: string; sub: string; date: st
 type AttendanceStats = { present: number; absent: number; late: number; excused: number; total: number };
 
 const DAYS_AR = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
+const DAYS_EN = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const DAYS_ES = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
+const DAYS_KU = ["یەکشەممە", "دووشەممە", "سێشەممە", "چوارشەممە", "پێنجشەممە", "هەینی", "شەممە"];
+
 const MONTHS_AR = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+const MONTHS_EN = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const MONTHS_ES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+const MONTHS_KU = ["کانوونی دووەم", "شوبات", "ئازار", "نیسان", "ئایار", "حوزەیران", "تەممووز", "ئاب", "ئەیلوول", "تشرینی یەکەم", "تشرینی دووەم", "کانوونی یەکەم"];
+
+function getDayName(locale: string, d: Date) {
+  const i = d.getDay();
+  if (locale === "en") return DAYS_EN[i];
+  if (locale === "es") return DAYS_ES[i];
+  if (locale === "ku") return DAYS_KU[i];
+  return DAYS_AR[i];
+}
+function getMonthName(locale: string, m: number) {
+  if (locale === "en") return MONTHS_EN[m];
+  if (locale === "es") return MONTHS_ES[m];
+  if (locale === "ku") return MONTHS_KU[m];
+  return MONTHS_AR[m];
+}
 
 export default function DashboardPage() {
   const router = useRouter();
+  const { locale, dict } = useDict();
   const [loading, setLoading] = useState(true);
   const [primary, setPrimary] = useState<Membership | null>(null);
   const [counts, setCounts] = useState<Counts>({ players: 0, teams: 0, staff: 0, sessions: 0, matches: 0 });
@@ -60,31 +83,26 @@ export default function DashboardPage() {
         supabase.from("attendance").select("status, training_sessions!inner(session_date, academy_id)").eq("training_sessions.academy_id", aid).gte("training_sessions.session_date", thirtyDaysAgo),
       ]);
 
-      setCounts({
-        players: p.count || 0, teams: t.count || 0, staff: s.count || 0,
-        sessions: ss.count || 0, matches: mm.count || 0,
-      });
+      setCounts({ players: p.count || 0, teams: t.count || 0, staff: s.count || 0, sessions: ss.count || 0, matches: mm.count || 0 });
       setNextSession(ns.data as unknown as NextSession);
       setNextMatch(nm.data as unknown as NextMatch);
 
-      // Activities
       const acts: Activity[] = [];
       (recentPlayers.data || []).forEach((x: { id: string; first_name: string; last_name: string; created_at: string }) => {
-        acts.push({ id: `pl-${x.id}`, type: "player", label: "لاعب جديد", sub: `${x.first_name} ${x.last_name}`, date: x.created_at, href: `/dashboard/players/${x.id}` });
+        acts.push({ id: `pl-${x.id}`, type: "player", label: dict.dashboard.newPlayer, sub: `${x.first_name} ${x.last_name}`, date: x.created_at, href: `/dashboard/players/${x.id}` });
       });
       (recentTeams.data || []).forEach((x: { id: string; name: string; created_at: string }) => {
-        acts.push({ id: `tm-${x.id}`, type: "team", label: "فريق جديد", sub: x.name, date: x.created_at, href: `/dashboard/teams/${x.id}` });
+        acts.push({ id: `tm-${x.id}`, type: "team", label: dict.dashboard.newTeam, sub: x.name, date: x.created_at, href: `/dashboard/teams/${x.id}` });
       });
-      (recentSessions.data || []).forEach((x: { id: string; title: string | null; session_date: string; created_at: string; teams: { name: string } | null }) => {
-        acts.push({ id: `ss-${x.id}`, type: "session", label: "جلسة تدريب", sub: x.title || x.teams?.name || "جلسة", date: x.created_at, href: `/dashboard/schedule/${x.id}` });
+      (recentSessions.data || []).forEach((x: { id: string; title: string | null; created_at: string; teams: { name: string } | null }) => {
+        acts.push({ id: `ss-${x.id}`, type: "session", label: dict.dashboard.trainingSession, sub: x.title || x.teams?.name || "-", date: x.created_at, href: `/dashboard/schedule/${x.id}` });
       });
-      (recentMatches.data || []).forEach((x: { id: string; opponent: string; match_date: string; created_at: string; teams: { name: string } | null }) => {
-        acts.push({ id: `mt-${x.id}`, type: "match", label: "مباراة", sub: `${x.teams?.name || "فريقنا"} × ${x.opponent}`, date: x.created_at, href: `/dashboard/matches/${x.id}` });
+      (recentMatches.data || []).forEach((x: { id: string; opponent: string; created_at: string; teams: { name: string } | null }) => {
+        acts.push({ id: `mt-${x.id}`, type: "match", label: dict.dashboard.match, sub: `${x.teams?.name || "-"} × ${x.opponent}`, date: x.created_at, href: `/dashboard/matches/${x.id}` });
       });
       acts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
       setActivities(acts.slice(0, 6));
 
-      // Attendance stats
       const rows = (attRows.data || []) as { status: string }[];
       const stats: AttendanceStats = { present: 0, absent: 0, late: 0, excused: 0, total: rows.length };
       rows.forEach((r) => {
@@ -94,31 +112,28 @@ export default function DashboardPage() {
         else if (r.status === "excused") stats.excused++;
       });
       setAttStats(stats);
-
       setLoading(false);
     }
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
-  if (loading) {
-    return <div className="flex h-full items-center justify-center p-10"><p className="text-muted-foreground text-sm">···</p></div>;
-  }
+  if (loading) return <div className="flex h-full items-center justify-center p-10"><p className="text-muted-foreground text-sm">···</p></div>;
   if (!primary) return null;
 
   const now = new Date();
-  const dayName = DAYS_AR[now.getDay()];
+  const dayName = getDayName(locale, now);
   const dayNum = now.getDate();
-  const monthName = MONTHS_AR[now.getMonth()];
+  const monthName = getMonthName(locale, now.getMonth());
   const year = now.getFullYear();
-
   const attendanceRate = attStats.total > 0 ? Math.round(((attStats.present + attStats.late) / attStats.total) * 100) : 0;
 
   const stats = [
-    { label: "لاعب", en: "PLAYERS", val: counts.players, href: "/dashboard/players" },
-    { label: "فريق", en: "TEAMS", val: counts.teams, href: "/dashboard/teams" },
-    { label: "مدرب", en: "STAFF", val: counts.staff, href: "/dashboard/staff" },
-    { label: "جلسة", en: "SESSIONS", val: counts.sessions, href: "/dashboard/schedule" },
-    { label: "مباراة", en: "MATCHES", val: counts.matches, href: "/dashboard/matches" },
+    { label: dict.dashboard.statPlayers, en: "PLAYERS", val: counts.players, href: "/dashboard/players" },
+    { label: dict.dashboard.statTeams, en: "TEAMS", val: counts.teams, href: "/dashboard/teams" },
+    { label: dict.dashboard.statStaff, en: "STAFF", val: counts.staff, href: "/dashboard/staff" },
+    { label: dict.dashboard.statSessions, en: "SESSIONS", val: counts.sessions, href: "/dashboard/schedule" },
+    { label: dict.dashboard.statMatches, en: "MATCHES", val: counts.matches, href: "/dashboard/matches" },
   ];
 
   const activityIcon = (type: string) => {
@@ -133,27 +148,24 @@ export default function DashboardPage() {
     const d = new Date(dateStr);
     const diff = Date.now() - d.getTime();
     const mins = Math.floor(diff / 60000);
-    if (mins < 1) return "الآن";
-    if (mins < 60) return `منذ ${mins} د`;
+    if (mins < 1) return dict.dashboard.agoNow;
+    if (mins < 60) return dict.dashboard.agoMin.replace("{n}", String(mins));
     const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `منذ ${hrs} س`;
+    if (hrs < 24) return dict.dashboard.agoHour.replace("{n}", String(hrs));
     const days = Math.floor(hrs / 24);
-    if (days < 30) return `منذ ${days} يوم`;
-    return d.toLocaleDateString("ar");
+    if (days < 30) return dict.dashboard.agoDay.replace("{n}", String(days));
+    return d.toLocaleDateString();
   };
 
   return (
     <div className="min-h-full">
-      {/* Header */}
       <header className="border-b border-border/60 px-6 md:px-10 py-6 flex items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2 text-[10px] font-mono tracking-[0.35em] text-accent">
             <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-            <span>CAMPO · DRESSING ROOM</span>
+            <span>{dict.dashboard.dressingRoom}</span>
           </div>
-          <h1 className="mt-2 text-2xl md:text-3xl font-bold leading-tight truncate">
-            {primary.academies.name}
-          </h1>
+          <h1 className="mt-2 text-2xl md:text-3xl font-bold leading-tight truncate">{primary.academies.name}</h1>
         </div>
         <div className="hidden md:flex flex-col items-end">
           <span className="font-mono text-3xl font-light leading-none">{dayNum}</span>
@@ -161,37 +173,26 @@ export default function DashboardPage() {
         </div>
       </header>
 
-      {/* Stats strip */}
       <section className="grid grid-cols-5 border-b border-border/60 w-full">
         {stats.map((s, i) => (
-          <Link
-            key={s.en}
-            href={s.href}
-            className={`group min-w-0 px-1 md:px-6 py-4 md:py-8 text-center hover:bg-card/40 transition-colors ${i > 0 ? "border-r border-border/60" : ""}`}
-          >
+          <Link key={s.en} href={s.href} className={`group min-w-0 px-1 md:px-6 py-4 md:py-8 text-center hover:bg-card/40 transition-colors ${i > 0 ? "border-r border-border/60 rtl:border-r ltr:border-l ltr:border-r-0" : ""}`}>
             <div className="font-mono text-[9px] tracking-[0.2em] text-muted-foreground/60 mb-2">{s.en}</div>
-            <div className="font-mono text-2xl md:text-4xl font-light leading-none group-hover:text-accent transition-colors">
-              {String(s.val).padStart(2, "0")}
-            </div>
+            <div className="font-mono text-2xl md:text-4xl font-light leading-none group-hover:text-accent transition-colors">{String(s.val).padStart(2, "0")}</div>
             <div className="mt-1.5 text-[10px] text-muted-foreground">{s.label}</div>
           </Link>
         ))}
       </section>
 
       <div className="grid md:grid-cols-[1fr_360px]">
-        {/* Left — Next events + Attendance */}
-        <div className="border-b md:border-b-0 md:border-l border-border/60">
-          {/* Next Session */}
+        <div className="border-b md:border-b-0 md:border-l border-border/60 ltr:md:border-l-0 ltr:md:border-r">
           <section className="border-b border-border/60 px-6 py-7 md:px-10 md:py-9">
             <div className="flex items-baseline justify-between mb-4">
-              <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">NEXT SESSION</span>
-              <Link href="/dashboard/schedule" className="text-xs text-accent hover:underline">الجدول ←</Link>
+              <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">{dict.dashboard.nextSession.toUpperCase()}</span>
+              <Link href="/dashboard/schedule" className="text-xs text-accent hover:underline">{dict.dashboard.viewSchedule} ←</Link>
             </div>
             {nextSession ? (
               <Link href={`/dashboard/schedule/${nextSession.id}`} className="block group">
-                <div className="text-xl md:text-2xl font-bold group-hover:text-accent transition-colors leading-tight">
-                  {nextSession.title || nextSession.teams?.name || "جلسة"}
-                </div>
+                <div className="text-xl md:text-2xl font-bold group-hover:text-accent transition-colors leading-tight">{nextSession.title || nextSession.teams?.name || "-"}</div>
                 <div className="mt-2 font-mono text-xs text-muted-foreground flex flex-wrap gap-x-3">
                   <span>{nextSession.session_date}</span>
                   {nextSession.start_time && <span>{nextSession.start_time.slice(0, 5)}</span>}
@@ -199,20 +200,19 @@ export default function DashboardPage() {
                 </div>
               </Link>
             ) : (
-              <p className="text-sm text-muted-foreground">— لا يوجد جلسات قادمة —</p>
+              <p className="text-sm text-muted-foreground">— {dict.dashboard.noUpcomingSessions} —</p>
             )}
           </section>
 
-          {/* Next Match */}
           <section className="border-b border-border/60 px-6 py-7 md:px-10 md:py-9">
             <div className="flex items-baseline justify-between mb-4">
-              <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">NEXT FIXTURE</span>
-              <Link href="/dashboard/matches" className="text-xs text-accent hover:underline">المباريات ←</Link>
+              <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">{dict.dashboard.nextFixture.toUpperCase()}</span>
+              <Link href="/dashboard/matches" className="text-xs text-accent hover:underline">{dict.dashboard.viewMatches} ←</Link>
             </div>
             {nextMatch ? (
               <Link href={`/dashboard/matches/${nextMatch.id}`} className="block group">
                 <div className="flex items-baseline gap-3 flex-wrap">
-                  <span className="text-sm text-muted-foreground">{nextMatch.teams?.name || "فريقنا"}</span>
+                  <span className="text-sm text-muted-foreground">{nextMatch.teams?.name || "-"}</span>
                   <span className="font-mono text-lg text-accent">×</span>
                   <span className="text-xl md:text-2xl font-bold group-hover:text-accent transition-colors">{nextMatch.opponent}</span>
                 </div>
@@ -223,93 +223,59 @@ export default function DashboardPage() {
                 </div>
               </Link>
             ) : (
-              <p className="text-sm text-muted-foreground">— لا يوجد مباريات قادمة —</p>
+              <p className="text-sm text-muted-foreground">— {dict.dashboard.noUpcomingMatches} —</p>
             )}
           </section>
 
-          {/* Attendance Overview (last 30 days) */}
           <section className="px-6 py-7 md:px-10 md:py-9">
             <div className="flex items-baseline justify-between mb-5">
-              <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">ATTENDANCE · 30 DAYS</span>
-              <Link href="/dashboard/reports" className="text-xs text-accent hover:underline">التقارير ←</Link>
+              <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">{dict.dashboard.attendance30.toUpperCase()}</span>
+              <Link href="/dashboard/reports" className="text-xs text-accent hover:underline">{dict.dashboard.viewReports} ←</Link>
             </div>
-
             {attStats.total === 0 ? (
-              <p className="text-sm text-muted-foreground">— لا يوجد سجلات حضور —</p>
+              <p className="text-sm text-muted-foreground">— —</p>
             ) : (
               <>
                 <div className="flex items-baseline gap-3 mb-4">
                   <span className="font-mono text-4xl font-light">{attendanceRate}%</span>
-                  <span className="text-xs text-muted-foreground">من {attStats.total} سجل</span>
+                  <span className="text-xs text-muted-foreground">{attStats.total} {dict.dashboard.totalRecords}</span>
                 </div>
-
-                {/* progress bar */}
                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden mb-5">
                   <div className="h-full bg-emerald-500" style={{ width: `${attendanceRate}%` }} />
                 </div>
-
-                {/* breakdown */}
                 <div className="grid grid-cols-4 gap-2 text-center">
-                  <div className="rounded-lg border bg-card p-3">
-                    <p className="font-mono text-lg font-light text-emerald-500">{attStats.present}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">حاضر</p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-3">
-                    <p className="font-mono text-lg font-light text-red-500">{attStats.absent}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">غائب</p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-3">
-                    <p className="font-mono text-lg font-light text-amber-500">{attStats.late}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">متأخر</p>
-                  </div>
-                  <div className="rounded-lg border bg-card p-3">
-                    <p className="font-mono text-lg font-light text-blue-500">{attStats.excused}</p>
-                    <p className="mt-1 text-[10px] text-muted-foreground">مبرر</p>
-                  </div>
+                  <div className="rounded-lg border bg-card p-3"><p className="font-mono text-lg font-light text-emerald-500">{attStats.present}</p><p className="mt-1 text-[10px] text-muted-foreground">{dict.dashboard.present}</p></div>
+                  <div className="rounded-lg border bg-card p-3"><p className="font-mono text-lg font-light text-red-500">{attStats.absent}</p><p className="mt-1 text-[10px] text-muted-foreground">{dict.dashboard.absent}</p></div>
+                  <div className="rounded-lg border bg-card p-3"><p className="font-mono text-lg font-light text-amber-500">{attStats.late}</p><p className="mt-1 text-[10px] text-muted-foreground">{dict.dashboard.late}</p></div>
+                  <div className="rounded-lg border bg-card p-3"><p className="font-mono text-lg font-light text-blue-500">{attStats.excused}</p><p className="mt-1 text-[10px] text-muted-foreground">{dict.dashboard.excused}</p></div>
                 </div>
               </>
             )}
           </section>
         </div>
 
-        {/* Right — Activity Feed */}
         <aside className="px-6 py-7 md:px-8 md:py-9">
           <div className="flex items-baseline justify-between mb-5">
-            <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">RECENT ACTIVITY</span>
+            <span className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70">{dict.dashboard.recentActivity.toUpperCase()}</span>
           </div>
-
           {activities.length === 0 ? (
-            <p className="text-sm text-muted-foreground">— لا يوجد نشاطات —</p>
+            <p className="text-sm text-muted-foreground">— {dict.dashboard.noActivity} —</p>
           ) : (
             <div className="space-y-1">
               {activities.map((a) => (
-                <Link
-                  key={a.id}
-                  href={a.href}
-                  className="flex items-start gap-3 py-3 border-b border-border/40 last:border-b-0 group"
-                >
-                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-sm">
-                    {activityIcon(a.type)}
-                  </div>
+                <Link key={a.id} href={a.href} className="flex items-start gap-3 py-3 border-b border-border/40 last:border-b-0 group">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/50 text-sm">{activityIcon(a.type)}</div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">
-                      {a.label}
-                    </p>
-                    <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">
-                      {a.sub}
-                    </p>
+                    <p className="text-[10px] font-mono uppercase tracking-wider text-muted-foreground/60">{a.label}</p>
+                    <p className="text-sm font-medium truncate group-hover:text-accent transition-colors">{a.sub}</p>
                   </div>
-                  <span className="text-[10px] text-muted-foreground shrink-0 mt-1">
-                    {timeAgo(a.date)}
-                  </span>
+                  <span className="text-[10px] text-muted-foreground shrink-0 mt-1">{timeAgo(a.date)}</span>
                 </Link>
               ))}
             </div>
           )}
-
-          {/* Role card */}
           <div className="mt-8 pt-6 border-t border-border/60">
-            <div className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70 mb-3">ROLE</div>
+            <div className="font-mono text-[10px] tracking-[0.3em] text-muted-foreground/70 mb-3">{dict.dashboard.role.toUpperCase()}</div>
             <div className="text-xl font-bold uppercase tracking-wide">{primary.role}</div>
             <div className="mt-1.5 text-xs text-muted-foreground">
               {primary.academies.city && `${primary.academies.city}، `}{primary.academies.country || "—"}

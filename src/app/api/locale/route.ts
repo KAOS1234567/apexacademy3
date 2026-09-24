@@ -15,11 +15,11 @@ export async function POST(req: Request) {
   if (!["ar", "ku", "en", "es"].includes(locale)) {
     return NextResponse.json({ ok: false }, { status: 400 });
   }
-  const c = await cookies();
-  c.set("locale", locale, {
+  const response = NextResponse.json({ ok: true, locale });
+  response.cookies.set("locale", locale, {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
     sameSite: "lax",
   });
-  return NextResponse.json({ ok: true });
+  return response;
 }

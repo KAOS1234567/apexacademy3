@@ -1,28 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { Globe, Check } from "lucide-react";
 import { LOCALES } from "@/i18n/dictionaries";
 import { cn } from "@/lib/utils";
 
 export function LanguageToggle({ current }: { current: string }) {
-  const router = useRouter();
   const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
 
-  async function pick(code: string) {
-    setOpen(false);
-    setPending(true);
-    try {
-      await fetch("/api/locale", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ locale: code }),
-      });
-      router.refresh();
-      window.location.reload();
-    } catch {}
+  function pick(code: string) {
+    document.cookie = `locale=${code}; path=/; max-age=${60 * 60 * 24 * 365}; samesite=lax`;
+    window.location.reload();
   }
 
   return (
@@ -30,7 +18,6 @@ export function LanguageToggle({ current }: { current: string }) {
       <button
         onClick={() => setOpen(!open)}
         className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-        disabled={pending}
       >
         <Globe className="h-4 w-4" />
         <span className="flex-1 text-start">
@@ -41,13 +28,13 @@ export function LanguageToggle({ current }: { current: string }) {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute bottom-full mb-2 end-0 z-50 w-full min-w-[160px] rounded-lg border bg-card p-1 shadow-lg">
+          <div className="absolute bottom-full mb-2 start-0 z-50 w-full min-w-[160px] rounded-lg border bg-card p-1 shadow-lg">
             {LOCALES.map((l) => (
               <button
                 key={l.code}
                 onClick={() => pick(l.code)}
                 className={cn(
-                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors text-start",
+                  "flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-start",
                   l.code === current ? "bg-primary/15 text-primary" : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
