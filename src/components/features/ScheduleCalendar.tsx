@@ -26,17 +26,21 @@ type MatchLite = {
   teams: { name: string } | null;
 };
 
-const AR_DAYS = ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"];
-const AR_MONTHS = ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+const DAYS_MAP: Record<string,string[]> = { ar: ["السبت","الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة"], ku: ["شەممە","یەکشەممە","دووشەممە","سێشەممە","چوارشەممە","پێنجشەممە","هەینی"], en: ["Sat","Sun","Mon","Tue","Wed","Thu","Fri"], es: ["Sáb","Dom","Lun","Mar","Mié","Jue","Vie"] };
+const AR_DAYS = DAYS_MAP.ar;
+const MONTHS_MAP: Record<string,string[]> = { ar: ["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"], ku: ["کانوونی دووەم","شوبات","ئازار","نیسان","ئایار","حوزەیران","تەممووز","ئاب","ئەیلوول","تشرینی یەکەم","تشرینی دووەم","کانوونی یەکەم"], en: ["January","February","March","April","May","June","July","August","September","October","November","December"], es: ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"] };
+const AR_MONTHS = MONTHS_MAP.ar;
+
 
 function pad(n: number) { return n.toString().padStart(2, "0"); }
 function weekdayIdx(jsDay: number): number { return jsDay === 6 ? 0 : jsDay + 1; }
 
 export function ScheduleCalendar({
-  sessions, matches,
+  sessions, matches, locale,
 }: {
   sessions: Session[];
   matches: MatchLite[];
+  locale?: string;
 }) {
   const byDate = useMemo(() => {
     const m = new Map<string, { sessions: Session[]; matches: MatchLite[] }>();
@@ -69,6 +73,9 @@ export function ScheduleCalendar({
   const startOffset = weekdayIdx(firstOfMonth.getDay());
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
+  const MONTHS_DYN: string[] = (MONTHS_MAP as Record<string, string[]>)[locale || "ar"] || AR_MONTHS;
+  const DAYS_DYN: string[] = (DAYS_MAP as Record<string, string[]>)[locale || "ar"] || AR_DAYS;
+
   const cells: (number | null)[] = [];
   for (let i = 0; i < startOffset; i++) cells.push(null);
   for (let d = 1; d <= daysInMonth; d++) cells.push(d);
@@ -90,7 +97,7 @@ export function ScheduleCalendar({
           className="rounded-lg p-2 transition hover:bg-muted">
           <ChevronRight className="h-4 w-4" />
         </button>
-        <div className="text-sm font-semibold">{AR_MONTHS[month]} {year}</div>
+        <div className="text-sm font-semibold">{MONTHS_DYN[month]} {year}</div>
         <button onClick={() => setCursor(new Date(year, month + 1, 1))}
           className="rounded-lg p-2 transition hover:bg-muted">
           <ChevronLeft className="h-4 w-4" />
@@ -98,7 +105,7 @@ export function ScheduleCalendar({
       </div>
 
       <div className="mb-1 md:mb-2 grid grid-cols-7 gap-1 md:gap-1.5 text-center text-[9px] md:text-xs text-muted-foreground">
-        {AR_DAYS.map(d => <div key={d} className="py-1">{d}</div>)}
+        {DAYS_DYN.map(d => <div key={d} className="py-1">{d}</div>)}
       </div>
 
       <div className="grid grid-cols-7 gap-1 md:gap-1.5">
