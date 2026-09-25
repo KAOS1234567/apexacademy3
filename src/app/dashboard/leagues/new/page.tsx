@@ -8,9 +8,15 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/DictProvider";
+import { leaguesDict } from "@/i18n/leagues";
 
 export default function NewLeaguePage() {
   const router = useRouter();
+  const { locale } = useDict();
+  const d = leaguesDict[locale as keyof typeof leaguesDict] || leaguesDict.ar;
+  const f = d.form;
+
   const [academyId, setAcademyId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [season, setSeason] = useState("");
@@ -24,13 +30,7 @@ export default function NewLeaguePage() {
       const supabase = createClient();
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { router.push("/login"); return; }
-
-      const { data: members } = await supabase
-        .from("academy_members")
-        .select("academy_id")
-        .eq("user_id", user.id)
-        .limit(1);
-
+      const { data: members } = await supabase.from("academy_members").select("academy_id").eq("user_id", user.id).limit(1);
       if (!members || members.length === 0) { router.push("/onboarding"); return; }
       setAcademyId(members[0].academy_id);
     }
@@ -41,28 +41,20 @@ export default function NewLeaguePage() {
     e.preventDefault();
     if (!academyId) return;
     setError("");
+    if (name.trim().length < 2) { setError(f.errName); return; }
     setLoading(true);
 
     const supabase = createClient();
-    const { data, error: insertError } = await supabase
-      .from("leagues")
-      .insert({
-        academy_id: academyId,
-        name: name.trim(),
-        season: season.trim() || null,
-        format,
-        legs,
-        status: "draft",
-      })
-      .select("id")
-      .single();
+    const { data, error: insertError } = await supabase.from("leagues").insert({
+      academy_id: academyId,
+      name: name.trim(),
+      season: season.trim() || null,
+      format,
+      legs,
+      status: "draft",
+    }).select("id").single();
 
-    if (insertError) {
-      setError(insertError.message);
-      setLoading(false);
-      return;
-    }
-
+    if (insertError) { setError(insertError.message); setLoading(false); return; }
     router.push(`/dashboard/leagues/${data.id}`);
   }
 
@@ -74,84 +66,46 @@ export default function NewLeaguePage() {
             <Trophy className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold">إنشاء دوري جديد</h1>
-            <p className="text-sm text-muted-foreground">
-              حدد التفاصيل الأساسية للدوري
-            </p>
+            <h1 className="text-2xl font-bold">{f.title}</h1>
+            <p className="text-sm text-muted-foreground">{f.subtitle}</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4 rounded-2xl border bg-card p-6">
             <div className="space-y-2">
-              <Label htmlFor="name">اسم الدوري *</Label>
-              <Input
-                id="name"
-                placeholder="مثال: دوري الناشئين 2026"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-                disabled={loading}
-              />
+              <Label htmlFor="name">{f.nameLabel}</Label>
+              <Input id="name" placeholder={f.namePlaceholder} value={name} onChange={(e) => setName(e.target.value)} required disabled={loading} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="season">الموسم</Label>
-              <Input
-                id="season"
-                placeholder="مثال: 2026/2027"
-                value={season}
-                onChange={(e) => setSeason(e.target.value)}
-                disabled={loading}
-              />
+              <Label htmlFor="season">{f.seasonLabel}</Label>
+              <Input id="season" placeholder={f.seasonPlaceholder} value={season} onChange={(e) => setSeason(e.target.value)} disabled={loading} />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="format">النظام</Label>
-                <select
-                  id="format"
-                  value={format}
-                  onChange={(e) => setFormat(e.target.value as "league" | "groups")}
-                  disabled={loading}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
-                  <option value="league">دوري عادي</option>
-                  <option value="groups">مجموعات</option>
+                <Label htmlFor="format">{f.formatLabel}</Label>
+                <select id="format" value={format} onChange={(e) => setFormat(e.target.value as "league" | "groups")} disabled={loading} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
+                  <option value="league">{f.formatLeagueOpt}</option>
+                  <option value="groups">{f.formatGroupsOpt}</option>
                 </select>
               </div>
-
               <div className="space-y-2">
-                <Label htmlFor="legs">الصيغة</Label>
-                <select
-                  id="legs"
-                  value={legs}
-                  onChange={(e) => setLegs(Number(e.target.value) as 1 | 2)}
-                  disabled={loading}
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
-                >
-                  <option value={1}>ذهاب فقط</option>
-                  <option value={2}>ذهاب وإياب</option>
+                <Label htmlFor="legs">{f.legsLabel}</Label>
+                <select id="legs" value={legs} onChange={(e) => setLegs(Number(e.target.value) as 1 | 2)} disabled={loading} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
+                  <option value={1}>{f.legsSingle}</option>
+                  <option value={2}>{f.legsDouble}</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {error && (
-            <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-              {error}
-            </div>
-          )}
+          {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={loading || !academyId}>
-              {loading ? "جاري الإنشاء..." : "إنشاء الدوري"}
-            </Button>
-            <Link href="/dashboard/leagues">
-              <Button type="button" variant="outline" disabled={loading}>
-                إلغاء
-              </Button>
-            </Link>
+            <Button type="submit" disabled={loading || !academyId}>{loading ? f.saving : f.save}</Button>
+            <Link href="/dashboard/leagues"><Button type="button" variant="outline" disabled={loading}>{f.cancel}</Button></Link>
           </div>
         </form>
       </div>

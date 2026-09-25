@@ -1,0 +1,157 @@
+1. مسودة
+2. نشط
+3. منتهي
+4. دوري عادي
+5. مجموعات
+6. خطأ
+7. اسم الدوري غير مطابق
+8. أدخل أرقامًا صحيحة (0 أو أكثر)
+9. >جاري التحميل...</p>
+      </div>
+    );
+  }
+
+  if (notFound || !league) {
+    return (
+      <div className=
+10. >الدوري غير موجود</h3>
+          <p className=
+11. >قد يكون محذوفًا أو لا تملك صلاحية الوصول إليه</p>
+          <Link href=
+12.  /> العودة للدوريات</Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // تجميع المباريات حسب الجولة
+  const matchesByRound = matches.reduce<Record<number, Match[]>>((acc, m) => {
+    const r = m.round_number || 1;
+    if (!acc[r]) acc[r] = [];
+    acc[r].push(m);
+    return acc;
+  }, {});
+  const roundKeys = Object.keys(matchesByRound).map(Number).sort((a, b) => a - b);
+
+  return (
+    <div className=
+13.  /> العودة للدوريات
+      </Link>
+
+      <div className=
+14. >
+              {FORMAT_LABELS[league.format] || league.format}
+              {league.season && ` • موسم ${league.season}`}
+              {` • ${league.legs === 2 ? 
+15. ذهاب فقط
+16.  /> تعديل
+              </Button>
+            </Link>
+            <a href={`/print/league/${league.id}`} target=
+17. 
+          }`}
+        >
+          الترتيب
+        </button>
+        <button
+          onClick={() => changeTab(
+18. 
+          }`}
+        >
+          المباريات
+        </button>
+        <button
+          onClick={() => changeTab(
+19. 
+          }`}
+        >
+          الفرق
+        </button>
+      </div>
+
+{activeTab === 
+20. >جدول الترتيب</h2>
+        </div>
+        <LeagueStandings matches={matches} />
+      </div>
+      )}
+
+{activeTab === 
+21. >جدول المباريات</h2>
+            <span className=
+22. >
+              لم يتم توليد الجدول بعد — أضف الفرق ثم اضغط 
+23. >
+                  الجولة {r}
+                </h3>
+                <div className=
+24. إدخال النتيجة
+25. >الفرق المشاركة</h2>
+            <span className=
+26.  /> إضافة فريق
+            </Button>
+            {showMenu && (
+              <div className=
+27. >من فرق أكاديميتي</div>
+                        <div className=
+28. >{availableInternal.length} فريق متاح</div>
+                      </div>
+                    </button>
+                    <button onClick={() => setMenuMode(
+29. >فريق خارجي</div>
+                        <div className=
+30. >أضف فريقًا من خارج الأكاديمية</div>
+                      </div>
+                    </button>
+                  </>
+                )}
+                {menuMode === 
+31.  /> رجوع
+                    </button>
+                    {availableInternal.length === 0 ? (
+                      <p className=
+32. >كل فرق الأكاديمية مشاركة بالفعل</p>
+                    ) : availableInternal.map((t) => (
+                      <button key={t.id} onClick={() => handleAddInternal(t.id)} disabled={busy}
+                        className=
+33.  /> رجوع
+                    </button>
+                    <div className=
+34. اسم الفريق الخارجي...
+35.  onClick={handleCreateExternal} disabled={busy || !newExternalName.trim()}>
+                        إضافة
+                      </Button>
+                    </div>
+                    {availableExternal.length > 0 && (
+                      <>
+                        <div className=
+36. >أو اختر فريقًا سابقًا:</div>
+                        {availableExternal.map((t) => (
+                          <button key={t.id} onClick={() => handleAddExternal(t.id)} disabled={busy}
+                            className=
+37. >لا يوجد فرق مشاركة بعد</p>
+          </div>
+        ) : (
+          <div className=
+38. >خارجي</span>
+                      )}
+                    </div>
+                    {sub && <div className=
+39. ) === g.v;
+                        return (
+                          <button
+                            key={g.v}
+                            onClick={() => handleChangeGroup(lt.id, g.v)}
+                            disabled={busy}
+                            title={`المجموعة ${g.v}`}
+                            className={`flex h-6 w-6 md:h-7 md:w-7 items-center justify-center rounded-full border text-[10px] md:text-xs font-bold transition ${
+                              active ? g.cls : 
+40. إزالة
+41. >إدخال نتيجة المباراة</h3>
+
+            <div className=
+42. المضيف
+43. الضيف
+44. جاري الحفظ...
+45. حفظ
