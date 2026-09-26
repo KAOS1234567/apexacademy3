@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useDict } from "@/i18n/DictProvider";
+import { leaguesDict } from "@/i18n/leagues";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,18 +37,19 @@ type Match = {
   away_ext: { name: string } | null;
 };
 
-const STATUS_LABELS: Record<string, string> = { draft: "مسودة", active: "نشط", finished: "منتهي" };
 const STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
   active: "bg-primary/15 text-primary",
   finished: "bg-muted/40 text-muted-foreground",
 };
-const FORMAT_LABELS: Record<string, string> = { league: "دوري عادي", groups: "مجموعات" };
 
 export default function LeagueDetailPage() {
   const router = useRouter();
   const params = useParams();
-  const { tr } = useDict();
+  const { tr, locale } = useDict();
+  const d = leaguesDict[locale as keyof typeof leaguesDict] || leaguesDict.ar;
+  const STATUS_LABELS: Record<string, string> = { draft: d.statusDraft, active: d.statusInProgress, finished: d.statusFinished };
+  const FORMAT_LABELS: Record<string, string> = { league: d.formatLeague, groups: d.formatGroups };
   const leagueId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -290,8 +292,7 @@ export default function LeagueDetailPage() {
     <div className="p-6 md:p-10">
       <Link href="/dashboard/leagues"
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowRight className="h-4 w-4" /> العودة للدوريات
-      </Link>
+        <ArrowRight className="h-4 w-4" />{tr("العودة للدوريات")}</Link>
 
       <div className="mb-6 rounded-2xl border bg-card p-6">
         <div className="flex items-start gap-4">
@@ -302,8 +303,8 @@ export default function LeagueDetailPage() {
             <h1 className="text-2xl font-bold">{league.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               {FORMAT_LABELS[league.format] || league.format}
-              {league.season && ` • موسم ${league.season}`}
-              {` • ${league.legs === 2 ? "ذهاب وإياب" : "ذهاب فقط"}`}
+              {league.season && ` • ${d.form.seasonLabel} ${league.season}`}
+              {` • ${league.legs === 2 ? d.form.legsDouble : d.form.legsSingle}`}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -312,8 +313,7 @@ export default function LeagueDetailPage() {
             </span>
             <Link href={`/dashboard/leagues/${league.id}/edit`}>
               <Button variant="outline" size="sm">
-                <Pencil className="h-4 w-4" /> تعديل
-              </Button>
+                <Pencil className="h-4 w-4" />{tr("تعديل")}</Button>
             </Link>
             <a href={`/print/league/${league.id}`} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">
@@ -333,9 +333,7 @@ export default function LeagueDetailPage() {
               ? "border-2 border-primary bg-background text-foreground"
               : "border-2 border-transparent text-muted-foreground hover:text-foreground"
           }`}
-        >
-          الترتيب
-        </button>
+        >{tr("الترتيب")}</button>
         <button
           onClick={() => changeTab("matches")}
           className={`flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
@@ -343,9 +341,7 @@ export default function LeagueDetailPage() {
               ? "border-2 border-primary bg-background text-foreground"
               : "border-2 border-transparent text-muted-foreground hover:text-foreground"
           }`}
-        >
-          المباريات
-        </button>
+        >{tr("المباريات")}</button>
         <button
           onClick={() => changeTab("teams")}
           className={`flex-1 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-all ${
@@ -353,9 +349,7 @@ export default function LeagueDetailPage() {
               ? "border-2 border-primary bg-background text-foreground"
               : "border-2 border-transparent text-muted-foreground hover:text-foreground"
           }`}
-        >
-          الفرق
-        </button>
+        >{tr("الفرق")}</button>
       </div>
 
 {activeTab === "standings" && (
@@ -465,8 +459,7 @@ export default function LeagueDetailPage() {
           </div>
           <div className="relative">
             <Button size="sm" onClick={() => setShowMenu((s) => !s)} disabled={busy}>
-              <Plus className="h-4 w-4" /> إضافة فريق
-            </Button>
+              <Plus className="h-4 w-4" />{tr("إضافة فريق")}</Button>
             {showMenu && (
               <div className="absolute left-0 top-full z-20 mt-2 w-72 rounded-xl border bg-card p-2 shadow-lg">
                 {menuMode === "root" && (
@@ -493,8 +486,7 @@ export default function LeagueDetailPage() {
                   <>
                     <button onClick={() => setMenuMode("root")}
                       className="mb-1 flex w-full items-center gap-1 rounded-lg px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
-                      <ArrowRight className="h-3 w-3 rotate-180" /> رجوع
-                    </button>
+                      <ArrowRight className="h-3 w-3 rotate-180" />{tr("رجوع")}</button>
                     {availableInternal.length === 0 ? (
                       <p className="px-3 py-2 text-xs text-muted-foreground">{tr("كل فرق الأكاديمية مشاركة بالفعل")}</p>
                     ) : availableInternal.map((t) => (
@@ -513,16 +505,13 @@ export default function LeagueDetailPage() {
                   <>
                     <button onClick={() => setMenuMode("root")}
                       className="mb-1 flex w-full items-center gap-1 rounded-lg px-3 py-1 text-xs text-muted-foreground hover:text-foreground">
-                      <ArrowRight className="h-3 w-3 rotate-180" /> رجوع
-                    </button>
+                      <ArrowRight className="h-3 w-3 rotate-180" />{tr("رجوع")}</button>
                     <div className="mb-2 flex gap-2 p-1">
                       <Input placeholder="اسم الفريق الخارجي..." value={newExternalName}
                         onChange={(e) => setNewExternalName(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") handleCreateExternal(); }}
                         disabled={busy} className="h-8 text-sm" />
-                      <Button size="sm" onClick={handleCreateExternal} disabled={busy || !newExternalName.trim()}>
-                        إضافة
-                      </Button>
+                      <Button size="sm" onClick={handleCreateExternal} disabled={busy || !newExternalName.trim()}>{tr("إضافة")}</Button>
                     </div>
                     {availableExternal.length > 0 && (
                       <>
@@ -646,9 +635,7 @@ export default function LeagueDetailPage() {
                 {savingScore ? "جاري الحفظ..." : "حفظ"}
               </Button>
               <Button variant="outline" onClick={() => setScoringMatch(null)}
-                disabled={savingScore}>
-                إلغاء
-              </Button>
+                disabled={savingScore}>{tr("إلغاء")}</Button>
             </div>
           </div>
         </div>

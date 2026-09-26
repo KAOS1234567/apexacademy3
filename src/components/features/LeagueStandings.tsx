@@ -2,12 +2,14 @@
 
 import { Globe, Shield } from "lucide-react";
 import { computeStandings, MatchForStandings } from "@/lib/standings";
+import { useDict } from "@/i18n/DictProvider";
 
 type Props = {
   matches: MatchForStandings[];
 };
 
 export function LeagueStandings({ matches }: Props) {
+  const { tr } = useDict();
   const rows = computeStandings(matches);
 
   if (rows.length === 0) {
@@ -26,13 +28,13 @@ export function LeagueStandings({ matches }: Props) {
         <thead>
           <tr className="border-b text-[10px] md:text-xs text-muted-foreground">
             <th className="py-2 px-1 text-center font-medium w-6">#</th>
-            <th className="py-2 px-2 text-right font-medium">الفريق</th>
+            <th className="py-2 px-2 text-right font-medium">{tr("الفريق")}</th>
             <th className="py-2 px-1 text-center font-medium">لعب</th>
-            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">ف</th>
-            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">ت</th>
-            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">خ</th>
-            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">له</th>
-            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">عليه</th>
+            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">{tr("ف")}</th>
+            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">{tr("ت")}</th>
+            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">{tr("خ")}</th>
+            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">{tr("له")}</th>
+            <th className="py-2 px-1 text-center font-medium hidden md:table-cell">{tr("عليه")}</th>
             <th className="py-2 px-1 text-center font-medium">+/-</th>
             <th className="py-2 px-1 text-center font-medium">نقاط</th>
           </tr>
