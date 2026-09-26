@@ -7,6 +7,7 @@ import {
   ArrowRight, Medal, Trophy, Users, Plus, X, Shield, Globe, Building2, Calendar as CalIcon, Pencil, Printer,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useDict } from "@/i18n/DictProvider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -46,6 +47,7 @@ const FORMAT_LABELS: Record<string, string> = { league: "دوري عادي", gro
 export default function LeagueDetailPage() {
   const router = useRouter();
   const params = useParams();
+  const { tr } = useDict();
   const leagueId = params.id as string;
 
   const [loading, setLoading] = useState(true);
@@ -256,7 +258,7 @@ export default function LeagueDetailPage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-10">
-        <p className="text-muted-foreground">جاري التحميل...</p>
+        <p className="text-muted-foreground">{tr("جاري التحميل...")}</p>
       </div>
     );
   }
@@ -265,10 +267,10 @@ export default function LeagueDetailPage() {
     return (
       <div className="p-6 md:p-10">
         <div className="rounded-2xl border border-dashed bg-muted/20 p-12 text-center">
-          <h3 className="mb-2 text-lg font-semibold">الدوري غير موجود</h3>
-          <p className="mb-6 text-sm text-muted-foreground">قد يكون محذوفًا أو لا تملك صلاحية الوصول إليه</p>
+          <h3 className="mb-2 text-lg font-semibold">{tr("الدوري غير موجود")}</h3>
+          <p className="mb-6 text-sm text-muted-foreground">{tr("قد يكون محذوفًا أو لا تملك صلاحية الوصول إليه")}</p>
           <Link href="/dashboard/leagues">
-            <Button variant="outline"><ArrowRight className="h-4 w-4" /> العودة للدوريات</Button>
+            <Button variant="outline"><ArrowRight className="h-4 w-4" />{tr("العودة للدوريات")}</Button>
           </Link>
         </div>
       </div>
@@ -361,7 +363,7 @@ export default function LeagueDetailPage() {
       <div className="rounded-2xl border bg-card p-6">
         <div className="mb-4 flex items-center gap-2">
           <Trophy className="h-5 w-5 text-primary" />
-          <h2 className="font-semibold">جدول الترتيب</h2>
+          <h2 className="font-semibold">{tr("جدول الترتيب")}</h2>
         </div>
         <LeagueStandings matches={matches} />
       </div>
@@ -373,7 +375,7 @@ export default function LeagueDetailPage() {
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CalIcon className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">جدول المباريات</h2>
+            <h2 className="font-semibold">{tr("جدول المباريات")}</h2>
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               {matches.length}
             </span>
@@ -456,7 +458,7 @@ export default function LeagueDetailPage() {
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Users className="h-5 w-5 text-primary" />
-            <h2 className="font-semibold">الفرق المشاركة</h2>
+            <h2 className="font-semibold">{tr("الفرق المشاركة")}</h2>
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
               {leagueTeams.length}
             </span>
@@ -473,7 +475,7 @@ export default function LeagueDetailPage() {
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-sm transition hover:bg-muted">
                       <Building2 className="h-4 w-4 text-primary" />
                       <div className="flex-1">
-                        <div className="font-medium">من فرق أكاديميتي</div>
+                        <div className="font-medium">{tr("من فرق أكاديميتي")}</div>
                         <div className="text-xs text-muted-foreground">{availableInternal.length} فريق متاح</div>
                       </div>
                     </button>
@@ -481,8 +483,8 @@ export default function LeagueDetailPage() {
                       className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-sm transition hover:bg-muted">
                       <Globe className="h-4 w-4 text-primary" />
                       <div className="flex-1">
-                        <div className="font-medium">فريق خارجي</div>
-                        <div className="text-xs text-muted-foreground">أضف فريقًا من خارج الأكاديمية</div>
+                        <div className="font-medium">{tr("فريق خارجي")}</div>
+                        <div className="text-xs text-muted-foreground">{tr("أضف فريقًا من خارج الأكاديمية")}</div>
                       </div>
                     </button>
                   </>
@@ -494,7 +496,7 @@ export default function LeagueDetailPage() {
                       <ArrowRight className="h-3 w-3 rotate-180" /> رجوع
                     </button>
                     {availableInternal.length === 0 ? (
-                      <p className="px-3 py-2 text-xs text-muted-foreground">كل فرق الأكاديمية مشاركة بالفعل</p>
+                      <p className="px-3 py-2 text-xs text-muted-foreground">{tr("كل فرق الأكاديمية مشاركة بالفعل")}</p>
                     ) : availableInternal.map((t) => (
                       <button key={t.id} onClick={() => handleAddInternal(t.id)} disabled={busy}
                         className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-sm transition hover:bg-muted">
@@ -524,7 +526,7 @@ export default function LeagueDetailPage() {
                     </div>
                     {availableExternal.length > 0 && (
                       <>
-                        <div className="mt-2 mb-1 px-3 text-xs text-muted-foreground">أو اختر فريقًا سابقًا:</div>
+                        <div className="mt-2 mb-1 px-3 text-xs text-muted-foreground">{tr("أو اختر فريقًا سابقًا:")}</div>
                         {availableExternal.map((t) => (
                           <button key={t.id} onClick={() => handleAddExternal(t.id)} disabled={busy}
                             className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-right text-sm transition hover:bg-muted">
@@ -548,7 +550,7 @@ export default function LeagueDetailPage() {
 
         {leagueTeams.length === 0 ? (
           <div className="rounded-xl border border-dashed bg-muted/20 p-8 text-center">
-            <p className="text-sm text-muted-foreground">لا يوجد فرق مشاركة بعد</p>
+            <p className="text-sm text-muted-foreground">{tr("لا يوجد فرق مشاركة بعد")}</p>
           </div>
         ) : (
           <div className="space-y-2">
@@ -565,7 +567,7 @@ export default function LeagueDetailPage() {
                     <div className="font-medium flex items-center gap-2">
                       {displayName || "—"}
                       {isExternal && (
-                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-500">خارجي</span>
+                        <span className="rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] text-amber-500">{tr("خارجي")}</span>
                       )}
                     </div>
                     {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
@@ -612,7 +614,7 @@ export default function LeagueDetailPage() {
           onClick={() => !savingScore && setScoringMatch(null)}>
           <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-xl"
             onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-4 font-semibold">إدخال نتيجة المباراة</h3>
+            <h3 className="mb-4 font-semibold">{tr("إدخال نتيجة المباراة")}</h3>
 
             <div className="mb-4 grid grid-cols-2 gap-3">
               <div>
