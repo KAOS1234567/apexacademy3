@@ -396,7 +396,7 @@ export default function LeagueDetailPage() {
             {roundKeys.map((r) => (
               <div key={r}>
                 <h3 className="mb-2 text-xs font-semibold text-muted-foreground">
-                  الجولة {r}
+                  {tr("الجولة")} {r}
                 </h3>
                 <div className="space-y-2">
                   {matchesByRound[r].map((m) => {

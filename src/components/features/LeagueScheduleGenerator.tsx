@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { generateRoundRobin, TeamRef } from "@/lib/roundRobin";
+import { useDict } from "@/i18n/DictProvider";
 
 type LeagueTeam = {
   id: string;
@@ -31,6 +32,7 @@ export function LeagueScheduleGenerator({
   leagueId, academyId, leagueTeams, legs, format,
   existingMatchesCount, onGenerated,
 }: Props) {
+  const { tr } = useDict();
   const [open, setOpen] = useState(false);
   const [startDate, setStartDate] = useState(() => {
     const d = new Date();
@@ -129,7 +131,7 @@ export function LeagueScheduleGenerator({
     <div>
       {!open ? (
         <Button size="sm" onClick={() => setOpen(true)} disabled={leagueTeams.length < 2}>
-          <CalendarPlus className="h-4 w-4" /> توليد الجدول
+          <CalendarPlus className="h-4 w-4" /> {tr("توليد الجدول")}
         </Button>
       ) : (
         <div className="space-y-3">

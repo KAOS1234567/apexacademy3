@@ -8,8 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useDict } from "@/i18n/DictProvider";
 
 export default function EditLeaguePage() {
+  const { tr } = useDict();
   const router = useRouter();
   const params = useParams();
   const leagueId = params.id as string;
@@ -54,7 +56,7 @@ export default function EditLeaguePage() {
 
   async function handleDelete() {
     if (deleteConfirm.trim() !== name.trim()) {
-      setDeleteError("اسم الدوري غير مطابق");
+      setDeleteError(tr("اسم الدوري غير مطابق"));
       return;
     }
     setDeleting(true);
@@ -102,7 +104,7 @@ export default function EditLeaguePage() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center p-10">
-        <p className="text-muted-foreground">جاري التحميل...</p>
+        <p className="text-muted-foreground">{tr("جاري التحميل...")}</p>
       </div>
     );
   }
@@ -111,9 +113,9 @@ export default function EditLeaguePage() {
     return (
       <div className="p-6 md:p-10">
         <div className="rounded-2xl border border-dashed bg-muted/20 p-12 text-center">
-          <h3 className="mb-2 text-lg font-semibold">الدوري غير موجود</h3>
+          <h3 className="mb-2 text-lg font-semibold">{tr("الدوري غير موجود")}</h3>
           <Link href="/dashboard/leagues">
-            <Button variant="outline"><ArrowRight className="h-4 w-4" /> العودة للدوريات</Button>
+            <Button variant="outline"><ArrowRight className="h-4 w-4" /> {tr("العودة للدوريات")}</Button>
           </Link>
         </div>
       </div>
@@ -124,61 +126,60 @@ export default function EditLeaguePage() {
     <div className="p-6 md:p-10">
       <Link href={`/dashboard/leagues/${leagueId}`}
         className="mb-4 inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-        <ArrowRight className="h-4 w-4" /> العودة للدوري
-      </Link>
+        <ArrowRight className="h-4 w-4" /> {tr("العودة للدوري")}</Link>
 
       <div className="mx-auto max-w-2xl">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold">تعديل الدوري</h1>
-          <p className="text-sm text-muted-foreground">حدّث تفاصيل الدوري</p>
+          <h1 className="text-2xl font-bold">{tr("تعديل الدوري")}</h1>
+          <p className="text-sm text-muted-foreground">{tr("حدّث تفاصيل الدوري")}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4 rounded-2xl border bg-card p-6">
             <div className="space-y-2">
-              <Label htmlFor="name">اسم الدوري *</Label>
+              <Label htmlFor="name">{tr("اسم الدوري *")}</Label>
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)}
                 required disabled={saving} />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="season">الموسم</Label>
+              <Label htmlFor="season">{tr("الموسم")}</Label>
               <Input id="season" value={season} onChange={(e) => setSeason(e.target.value)}
                 disabled={saving} />
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="format">النظام</Label>
+                <Label htmlFor="format">{tr("النظام")}</Label>
                 <select id="format" value={format}
                   onChange={(e) => setFormat(e.target.value as "league" | "groups")}
                   disabled={saving}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
-                  <option value="league">دوري عادي</option>
-                  <option value="groups">مجموعات</option>
+                  <option value="league">{tr("دوري عادي")}</option>
+                  <option value="groups">{tr("مجموعات")}</option>
                 </select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="legs">الصيغة</Label>
+                <Label htmlFor="legs">{tr("الصيغة")}</Label>
                 <select id="legs" value={legs}
                   onChange={(e) => setLegs(Number(e.target.value) as 1 | 2)}
                   disabled={saving}
                   className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
-                  <option value={1}>ذهاب فقط</option>
-                  <option value={2}>ذهاب وإياب</option>
+                  <option value={1}>{tr("ذهاب فقط")}</option>
+                  <option value={2}>{tr("ذهاب وإياب")}</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="status">الحالة</Label>
+              <Label htmlFor="status">{tr("الحالة")}</Label>
               <select id="status" value={status}
                 onChange={(e) => setStatus(e.target.value as "draft" | "active" | "finished")}
                 disabled={saving}
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
-                <option value="draft">مسودة</option>
-                <option value="active">نشط</option>
-                <option value="finished">منتهي</option>
+                <option value="draft">{tr("مسودة")}</option>
+                <option value="active">{tr("نشط")}</option>
+                <option value="finished">{tr("منتهي")}</option>
               </select>
             </div>
           </div>
@@ -191,32 +192,29 @@ export default function EditLeaguePage() {
 
           <div className="flex gap-3">
             <Button type="submit" disabled={saving}>
-              <Save className="h-4 w-4" /> {saving ? "جاري الحفظ..." : "حفظ التعديلات"}
+              <Save className="h-4 w-4" /> {saving ? "جاري الحفظ..." : tr("btn_save_changes")}
             </Button>
             <Link href={`/dashboard/leagues/${leagueId}`}>
-              <Button type="button" variant="outline" disabled={saving}>إلغاء</Button>
+              <Button type="button" variant="outline" disabled={saving}>{tr("إلغاء")}</Button>
             </Link>
           </div>
         </form>
 
         <div className="mt-8 rounded-2xl border border-destructive/30 bg-destructive/5 p-6">
-          <h2 className="mb-1 font-semibold text-destructive">منطقة الخطر</h2>
+          <h2 className="mb-1 font-semibold text-destructive">{tr("منطقة الخطر")}</h2>
           <p className="mb-4 text-sm text-muted-foreground">
-            حذف الدوري سيحذف كل مبارياته وفرقه المشاركة. لا يمكن التراجع.
-          </p>
+            {tr("deletion_warning")}</p>
 
           {!showDelete ? (
             <Button type="button" variant="outline"
               onClick={() => { setShowDelete(true); setDeleteConfirm(""); setDeleteError(""); }}
               className="border-destructive/50 text-destructive hover:bg-destructive/10 hover:text-destructive">
-              <Trash2 className="h-4 w-4" /> حذف الدوري
-            </Button>
+              <Trash2 className="h-4 w-4" /> {tr("حذف الدوري")}</Button>
           ) : (
             <div className="space-y-3">
               <div className="space-y-2">
                 <Label htmlFor="deleteConfirm" className="text-sm">
-                  اكتب اسم الدوري <span className="font-mono font-semibold">"{name}"</span> للتأكيد:
-                </Label>
+                  {tr("اكتب اسم الدوري")}<span className="font-mono font-semibold">"{name}"</span> {tr("للتأكيد:")}</Label>
                 <Input id="deleteConfirm" value={deleteConfirm}
                   onChange={(e) => setDeleteConfirm(e.target.value)}
                   placeholder={name} disabled={deleting} />
@@ -235,8 +233,7 @@ export default function EditLeaguePage() {
                 <Button type="button" variant="outline"
                   onClick={() => { setShowDelete(false); setDeleteConfirm(""); setDeleteError(""); }}
                   disabled={deleting}>
-                  إلغاء
-                </Button>
+                  {tr("إلغاء")}</Button>
               </div>
             </div>
           )}
