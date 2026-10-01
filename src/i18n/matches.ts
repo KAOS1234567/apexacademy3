@@ -1,5 +1,9 @@
 export const matchesDict = {
   ar: {
+    selectMode: "تحديد",
+    deleteSelected: "حذف",
+    deleting: "جارٍ الحذف...",
+    deleteConfirm: "هل أنت متأكد من حذف المباريات المحددة؟",
     title: "المباريات", count: "مباراة", addMatch: "مباراة جديدة",
     noMatches: "لا يوجد مباريات بعد", noMatchesDesc: "أضف أول مباراة لفريقك",
     matchWord: "مباراة", notPlayed: "لم تُلعب", home: "ملعبنا", away: "خارج", neutral: "محايد",
@@ -42,6 +46,10 @@ export const matchesDict = {
     },
   },
   ku: {
+    selectMode: "دیاریکردن",
+    deleteSelected: "سڕینەوە",
+    deleting: "سڕینەوە...",
+    deleteConfirm: "دڵنیایت لە سڕینەوەی یارییە هەڵبژێردراوەکان؟",
     title: "یارییەکان", count: "یاری", addMatch: "یاری نوێ",
     noMatches: "هیچ یارییەک نییە", noMatchesDesc: "یەکەم یاری زیاد بکە",
     matchWord: "یاری", notPlayed: "نەکراوە", home: "یاریگای ئێمە", away: "دەرەوە", neutral: "بێلایەن",
@@ -84,6 +92,10 @@ export const matchesDict = {
     },
   },
   en: {
+    selectMode: "Select",
+    deleteSelected: "Delete",
+    deleting: "Deleting...",
+    deleteConfirm: "Are you sure you want to delete selected matches?",
     title: "Matches", count: "matches", addMatch: "New Match",
     noMatches: "No matches yet", noMatchesDesc: "Add your first match",
     matchWord: "matches", notPlayed: "Not played", home: "Home", away: "Away", neutral: "Neutral",
@@ -126,6 +138,10 @@ export const matchesDict = {
     },
   },
   es: {
+    selectMode: "Seleccionar",
+    deleteSelected: "Eliminar",
+    deleting: "Eliminando...",
+    deleteConfirm: "¿Eliminar los partidos seleccionados?",
     title: "Partidos", count: "partidos", addMatch: "Nuevo Partido",
     noMatches: "Aún no hay partidos", noMatchesDesc: "Añade tu primer partido",
     matchWord: "partidos", notPlayed: "No jugado", home: "Local", away: "Visitante", neutral: "Neutral",
