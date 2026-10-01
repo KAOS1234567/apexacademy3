@@ -7,6 +7,7 @@ import { Download, FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ReportDocument } from "@/components/features/ReportDocument";
+import { useDict } from "@/i18n/DictProvider";
 
 type Counts = { players: number; teams: number; staff: number; sessions: number; matches: number; attendance: number };
 type TopPlayer = { id: string; first_name: string; last_name: string; jersey_number: number | null; position: string | null; attendance_pct: number; appearances: number };
@@ -36,6 +37,7 @@ function downloadCSV(filename: string, csv: string) {
 }
 
 export default function ReportsPage() {
+  const { tr } = useDict();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [academyId, setAcademyId] = useState<string | null>(null);
@@ -187,20 +189,20 @@ export default function ReportsPage() {
   }
 
   const cards = [
-    { label: "اللاعبون", value: counts.players },
-    { label: "الفرق", value: counts.teams },
-    { label: "الطاقم", value: counts.staff },
-    { label: "الجلسات", value: counts.sessions },
-    { label: "المباريات", value: counts.matches },
-    { label: "سجلات الحضور", value: counts.attendance },
+    { label: tr("reports_players_label"), value: counts.players },
+    { label: tr("reports_teams_label"), value: counts.teams },
+    { label: tr("reports_staff_label"), value: counts.staff },
+    { label: tr("reports_sessions_label"), value: counts.sessions },
+    { label: tr("reports_matches_label"), value: counts.matches },
+    { label: tr("reports_attendance_label"), value: counts.attendance },
   ];
 
   return (
     <div className="p-6 md:p-10">
       <div className="mb-8 flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold">التقارير</h1>
-          <p className="mt-1 text-sm text-muted-foreground">نظرة شاملة على {academyName || "الأكاديمية"}</p>
+          <h1 className="text-2xl font-bold">{tr("reports_title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{tr("reports_subtitle")} {academyName || ""}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={exportPlayers} disabled={exporting}>
@@ -243,10 +245,12 @@ export default function ReportsPage() {
               <thead className="bg-muted/40">
                 <tr className="text-right text-xs text-muted-foreground">
                   <th className="px-4 py-3 font-medium">#</th>
-                  <th className="px-4 py-3 font-medium">اللاعب</th>
-                  <th className="hidden md:table-cell px-4 py-3 font-medium">الفريق</th>
-                  <th className="px-4 py-3 font-medium text-center">⚽ أهداف</th>
-                  <th className="px-4 py-3 font-medium text-center">🅰️ صناعة</th>
+                  <th className="px-4 py-3 font-medium">{tr("reports_player_col")}</th>
+                  <th className="hidden md:table-cell px-4 py-3 font-medium">{tr("reports_team_col")}</th>
+                  <th className="px-4 py-3 font-medium text-center"> ⚽ {tr("goals_th")}
+
+                  </th>
+            <th className="px-4 py-3 font-medium text-center">🅰️ {tr("assists_th")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -278,11 +282,11 @@ export default function ReportsPage() {
       <section className="mb-10">
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TOP ATTENDANCE</h2>
-          <Link href="/dashboard/players" className="text-xs text-accent hover:underline">كل اللاعبين ←</Link>
+          <Link href="/dashboard/players" className="text-xs text-accent hover:underline">{tr("all_players")} ←</Link>
         </div>
         {topPlayers.length === 0 ? (
           <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
-            <p className="text-sm text-muted-foreground">لا يوجد سجلات حضور بعد</p>
+            <p className="text-sm text-muted-foreground">{tr("no_attendance_yet")}</p>
           </div>
         ) : (
           <div className="rounded-2xl border bg-card overflow-hidden">
@@ -290,7 +294,7 @@ export default function ReportsPage() {
               <thead className="bg-muted/40">
                 <tr className="text-right text-xs text-muted-foreground">
                   <th className="px-4 py-3 font-medium">#</th>
-                  <th className="px-4 py-3 font-medium">اللاعب</th>
+                  <th className="px-4 py-3 font-medium">{tr("reports_player_col")}</th>
                   <th className="hidden md:table-cell px-4 py-3 font-medium">المركز</th>
                   <th className="px-4 py-3 font-medium text-center">الحضور</th>
                   <th className="hidden md:table-cell px-4 py-3 font-medium text-center">الجلسات</th>
@@ -324,7 +328,7 @@ export default function ReportsPage() {
       <section>
         <div className="flex items-baseline justify-between mb-4">
           <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">TEAMS</h2>
-          <Link href="/dashboard/teams" className="text-xs text-accent hover:underline">كل الفرق ←</Link>
+          <Link href="/dashboard/teams" className="text-xs text-accent hover:underline">{tr("all_teams")} ←</Link>
         </div>
         {teamStats.length === 0 ? (
           <div className="rounded-2xl border border-dashed bg-muted/20 p-8 text-center">
