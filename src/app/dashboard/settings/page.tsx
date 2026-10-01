@@ -151,7 +151,7 @@ export default function SettingsPage() {
   }
 
   async function handleDeleteAccount() {
-    if (deleteAccountInput.trim() !== "حذف") { setError("اكتب كلمة 'حذف' للتأكيد"); return; }
+      if (deleteAcademyInput.trim() !== academy.name) { setError(tr("type_academy_name")); return; }
     setDeletingAccount(true);
     const supabase = createClient();
     const { error } = await supabase.rpc("delete_my_account");
@@ -443,7 +443,7 @@ export default function SettingsPage() {
               <button onClick={() => !deletingAcademy && setDeleteAcademyOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-2 mb-4">
-              <Label className="text-xs">اكتب اسم الأكاديمية: <span className="font-mono text-accent">{academy.name}</span></Label>
+          <Label className="text-xs">{tr("academy_id")}: <span className="font-mono text-accent">{academy.name}</span></Label>
               <Input value={deleteAcademyInput} onChange={(e) => setDeleteAcademyInput(e.target.value)} disabled={deletingAcademy} placeholder={academy.name} />
             </div>
             {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
@@ -463,7 +463,7 @@ export default function SettingsPage() {
             <div className="flex items-start gap-3 mb-4">
               <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}><LogOut className="h-5 w-5 text-destructive" /></div>
               <div className="flex-1">
-                <h3 className="font-bold">حذف حسابك نهائياً؟</h3>
+        <h3 className="font-bold">{tr("type_academy_name")} <span className="font-bold text-destructive">"{academy.name}"</span></h3>
                 <p className="mt-1 text-xs text-muted-foreground">سيتم حذف حسابك.</p>
               </div>
               <button onClick={() => !deletingAccount && setDeleteAccountOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
