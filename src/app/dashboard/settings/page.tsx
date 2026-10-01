@@ -140,7 +140,7 @@ export default function SettingsPage() {
 
   async function handleDeleteAcademy() {
     if (!academy) return;
-    if (deleteAcademyInput.trim() !== academy.name) { setError("الاسم غير مطابق"); return; }
+    if (deleteAcademyInput.trim() !== academy.name) { setError(tr("name_mismatch")); return; }
     setDeletingAcademy(true);
     const supabase = createClient();
     const { error } = await supabase.from("academies").delete().eq("id", academy.id);
@@ -282,7 +282,7 @@ export default function SettingsPage() {
 
             <div className="rounded-2xl border bg-card overflow-hidden divide-y">
               {members.length === 0 ? (
-                <p className="text-center text-sm text-muted-foreground py-8">لا يوجد أعضاء</p>
+                <p className="text-center text-sm text-muted-foreground py-8">{tr("no_members")}</p>
               ) : (
                 members.map((m) => {
                   const RoleIcon = ROLE_ICONS[m.role] || UserIcon;
@@ -350,7 +350,7 @@ export default function SettingsPage() {
               <h2 className="text-sm font-mono uppercase tracking-wider text-muted-foreground mb-4">INFORMATION</h2>
               <div className="space-y-2 text-xs">
                 <div className="flex justify-between py-2 border-b border-border/40"><span className="text-muted-foreground">معرّف الأكاديمية</span><span className="font-mono truncate ml-3 max-w-[60%]" dir="ltr">{academy.id}</span></div>
-                <div className="flex justify-between py-2 border-b border-border/40"><span className="text-muted-foreground">عدد الأعضاء</span><span className="font-mono">{members.length}</span></div>
+                <div className="flex justify-between py-2 border-b border-border/40"><span className="text-muted-foreground">{tr("members_count")}</span><span className="font-mono">{members.length}</span></div>
               </div>
             </div>
 
@@ -358,15 +358,15 @@ export default function SettingsPage() {
               <div className="flex items-start gap-3 mb-5">
                 <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
                 <div>
-                  <h2 className="text-sm font-bold text-destructive">منطقة الخطر</h2>
-                  <p className="mt-1 text-xs text-muted-foreground">هذه العمليات لا يمكن التراجع عنها.</p>
+                  <h2 className="text-sm font-bold text-destructive">{tr("danger_zone")}</h2>
+                  <p className="mt-1 text-xs text-muted-foreground">{tr("danger_desc")}</p>
                 </div>
               </div>
               <div className="space-y-3">
                 <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">حذف الأكاديمية</p>
-                    <p className="text-xs text-muted-foreground">حذف كل البيانات نهائياً</p>
+                    <p className="text-sm font-medium">{tr("delete_academy")}</p>
+                    <p className="text-xs text-muted-foreground">{tr("delete_all_data")}</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => { setDeleteAcademyOpen(true); setDeleteAcademyInput(""); setError(null); }} className="text-destructive border-destructive/40 hover:bg-destructive/10 shrink-0">
                     <Trash2 className="h-3.5 w-3.5" />حذف
@@ -374,8 +374,8 @@ export default function SettingsPage() {
                 </div>
                 <div className="flex items-center justify-between gap-3 rounded-lg border bg-background/50 p-4">
                   <div className="min-w-0">
-                    <p className="text-sm font-medium">حذف الحساب</p>
-                    <p className="text-xs text-muted-foreground">حذف حسابك وكل الأكاديميات</p>
+                    <p className="text-sm font-medium">{tr("delete_account")}</p>
+                    <p className="text-xs text-muted-foreground">{tr("delete_account_desc")}</p>
                   </div>
                   <Button variant="outline" size="sm" onClick={() => { setDeleteAccountOpen(true); setDeleteAccountInput(""); setError(null); }} className="text-destructive border-destructive/40 hover:bg-destructive/10 shrink-0">
                     <LogOut className="h-3.5 w-3.5" />حذف
@@ -395,7 +395,7 @@ export default function SettingsPage() {
                 <Link2 className="h-5 w-5 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="font-bold">{generatedLink ? "الدعوة جاهزة" : "دعوة عضو جديد"}</h3>
+                <h3 className="font-bold">{generatedLink ? tr("invite_ready") : tr("invite_new_member")}</h3>
                 <p className="mt-1 text-xs text-muted-foreground">{generatedLink ? "انسخ الرابط وارسله" : "اختر الدور وشارك الرابط"}</p>
               </div>
               <button onClick={closeInviteModal} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
@@ -403,28 +403,28 @@ export default function SettingsPage() {
             {!generatedLink ? (
               <>
                 <div className="space-y-2 mb-4">
-                  <Label className="text-xs">الدور</Label>
+                  <Label className="text-xs">{tr("role")}</Label>
                   <select value={inviteRole} onChange={(e) => setInviteRole(e.target.value)} disabled={creatingInvite} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                     {INVITE_ROLES.map((r) => (<option key={r} value={r}>{ROLE_LABELS[r] || r}</option>))}
                   </select>
                 </div>
                 {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
                 <div className="flex gap-2 justify-end">
-                  <Button variant="outline" onClick={closeInviteModal} disabled={creatingInvite}>إلغاء</Button>
+                  <Button variant="outline" onClick={closeInviteModal} disabled={creatingInvite}>{tr("cancel")}</Button>
                   <Button onClick={handleCreateInvite} disabled={creatingInvite}>{creatingInvite ? "..." : "إنشاء الدعوة"}</Button>
                 </div>
               </>
             ) : (
               <>
                 <div className="space-y-2 mb-4">
-                  <Label className="text-xs">الرابط</Label>
+                  <Label className="text-xs">{tr("link")}</Label>
                   <div className="flex gap-2">
                     <input readOnly value={generatedLink} className="flex-1 h-9 rounded-md border border-input bg-muted/30 px-3 text-xs font-mono" dir="ltr" />
                     <Button size="sm" onClick={() => copyLink(generatedLink)}><Copy className="h-4 w-4" />{copied ? "تم!" : ""}</Button>
                   </div>
                   <p className="text-xs text-muted-foreground">أرسل هذا الرابط للمدعو. عند فتحه، سينضم تلقائياً للأكاديمية.</p>
                 </div>
-                <div className="flex justify-end"><Button onClick={closeInviteModal}>تم</Button></div>
+                <div className="flex justify-end"><Button onClick={closeInviteModal}>{tr("done")}</Button></div>
               </>
             )}
           </div>
@@ -437,7 +437,7 @@ export default function SettingsPage() {
             <div className="flex items-start gap-3 mb-4">
               <div className="rounded-full bg-destructive/15 flex items-center justify-center shrink-0" style={{ width: 40, height: 40 }}><AlertTriangle className="h-5 w-5 text-destructive" /></div>
               <div className="flex-1">
-                <h3 className="font-bold">حذف الأكاديمية نهائياً؟</h3>
+                <h3 className="font-bold">{tr("delete_academy")} {tr("permanent")}؟</h3>
                 <p className="mt-1 text-xs text-muted-foreground">سيتم حذف كل البيانات.</p>
               </div>
               <button onClick={() => !deletingAcademy && setDeleteAcademyOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
@@ -448,7 +448,7 @@ export default function SettingsPage() {
             </div>
             {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDeleteAcademyOpen(false)} disabled={deletingAcademy}>إلغاء</Button>
+              <Button variant="outline" onClick={() => setDeleteAcademyOpen(false)} disabled={deletingAcademy}>{tr("cancel")}</Button>
               <Button onClick={handleDeleteAcademy} disabled={deletingAcademy || deleteAcademyInput.trim() !== academy.name} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 {deletingAcademy ? "جاري الحذف..." : "حذف نهائي"}
               </Button>
@@ -469,12 +469,12 @@ export default function SettingsPage() {
               <button onClick={() => !deletingAccount && setDeleteAccountOpen(false)} className="shrink-0 text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-2 mb-4">
-              <Label className="text-xs">اكتب كلمة <span className="font-bold text-destructive">حذف</span></Label>
-              <Input value={deleteAccountInput} onChange={(e) => setDeleteAccountInput(e.target.value)} disabled={deletingAccount} placeholder="حذف" />
+              <Label className="text-xs">{tr("type_word")} <span className="font-bold text-destructive">{tr("delete_btn")}</span></Label>
+              <Input value={deleteAccountInput} onChange={(e) => setDeleteAccountInput(e.target.value)} disabled={deletingAccount} placeholder={tr("delete_btn")} />
             </div>
             {error && (<div className="mb-3 rounded-lg border border-destructive/50 bg-destructive/10 p-2.5 text-xs text-destructive">{error}</div>)}
             <div className="flex gap-2 justify-end">
-              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)} disabled={deletingAccount}>إلغاء</Button>
+              <Button variant="outline" onClick={() => setDeleteAccountOpen(false)} disabled={deletingAccount}>{tr("cancel")}</Button>
               <Button onClick={handleDeleteAccount} disabled={deletingAccount || deleteAccountInput.trim() !== "حذف"} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
                 {deletingAccount ? "جاري الحذف..." : "حذف الحساب"}
               </Button>
