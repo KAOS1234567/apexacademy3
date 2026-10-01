@@ -14,11 +14,6 @@ type Academy = { id: string; name: string; country: string | null; city: string 
 type Member = { id: string; user_id: string; role: string; created_at: string; profiles: { full_name: string | null; avatar_url: string | null } | null };
 type Invite = { id: string; code: string; role: string; created_at: string; used_count: number; max_uses: number | null; is_active: boolean };
 
-const ROLE_LABELS: Record<string, string> = {
-  owner: "مالك", admin: "مدير", head_coach: "مدرب رئيسي", coach: "مدرب",
-  assistant_coach: "مدرب مساعد", analyst: "محلل", medical: "طبي",
-  accountant: "محاسب", staff: "إداري",
-};
 
 const ROLE_ICONS: Record<string, typeof Crown> = {
   owner: Crown, admin: Shield, head_coach: Dumbbell, coach: Dumbbell,
@@ -31,6 +26,20 @@ const INVITE_ROLES = ["admin", "head_coach", "coach", "assistant_coach", "analys
 type Tab = "general" | "members" | "advanced";
 
 export default function SettingsPage() {
+  const { tr } = useDict();
+
+  const ROLE_LABELS: Record<string, string> = {
+    owner: tr("role_owner"),
+    admin: tr("role_admin"),
+    head_coach: tr("role_head_coach"),
+    coach: tr("role_coach"),
+    assistant_coach: tr("role_assistant_coach"),
+    analyst: tr("role_analyst"),
+    medical: tr("role_medical"),
+    accountant: tr("role_accountant"),
+    staff: tr("role_staff"),
+  };
+
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -221,26 +230,26 @@ export default function SettingsPage() {
 
         <div className="mb-6 flex items-center gap-1 border-b border-border/60 overflow-x-auto">
           <button onClick={() => setTab("general")} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === "general" ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-            <SettingsIcon className="inline h-4 w-4 ml-1" />عام
+              <SettingsIcon className="inline h-4 w-4 ml-1" /> {tr("tab_general")}
           </button>
           <button onClick={() => setTab("members")} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === "members" ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-            <Users className="inline h-4 w-4 ml-1" />الأعضاء ({members.length})
+            <Users className="inline h-4 w-4 ml-1" />{tr("tab_members")} ({members.length})
           </button>
           <button onClick={() => setTab("advanced")} className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${tab === "advanced" ? "border-accent text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-            <AlertTriangle className="inline h-4 w-4 ml-1" />متقدم
+              <AlertTriangle className="inline h-4 w-4 ml-1" /> {tr("tab_advanced")}
           </button>
         </div>
 
         {tab === "general" && (
           <form onSubmit={handleSave} className="space-y-6">
             <div className="space-y-4 rounded-2xl border bg-card p-6">
-              <div className="space-y-2"><Label htmlFor="name">اسم الأكاديمية *</Label><Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} /></div>
+              <div className="space-y-2"><Label htmlFor="name">{tr("academy_name")}</Label><Input id="name" value={name} onChange={(e) => setName(e.target.value)} required disabled={saving} /></div>
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2"><Label htmlFor="country">الدولة</Label><Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={saving} /></div>
-                <div className="space-y-2"><Label htmlFor="city">المدينة</Label><Input id="city" value={city} onChange={(e) => setCity(e.target.value)} disabled={saving} /></div>
+                <div className="space-y-2"><Label htmlFor="country">{tr("country")}</Label><Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} disabled={saving} /></div>
+                <div className="space-y-2"><Label htmlFor="city">{tr("city")}</Label><Input id="city" value={city} onChange={(e) => setCity(e.target.value)} disabled={saving} /></div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="currency">العملة</Label>
+                <Label htmlFor="currency">{tr("currency")}</Label>
                 <select id="currency" value={currency} onChange={(e) => setCurrency(e.target.value)} disabled={saving} className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50">
                   <option value="USD">USD — دولار أمريكي</option>
                   <option value="IQD">IQD — دينار عراقي</option>
@@ -253,12 +262,12 @@ export default function SettingsPage() {
             </div>
             {error && (<div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</div>)}
             <div className="space-y-4 rounded-2xl border bg-card p-6">
-              <h2 className="text-sm font-semibold text-muted-foreground">اللغة / Language</h2>
+              <h2 className="text-sm font-semibold text-muted-foreground">{tr("language_label")}</h2>
               <LanguageToggle current={locale} />
             </div>
 
-            {success && (<div className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm text-emerald-500">تم حفظ التعديلات بنجاح</div>)}
-            <div className="flex gap-3"><Button type="submit" disabled={saving}><Save className="h-4 w-4" />{saving ? "جاري الحفظ..." : "حفظ التعديلات"}</Button></div>
+            {success && (<div className="rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-3 text-sm text-emerald-500">{tr("save_success")}</div>)}
+            <div className="flex gap-3"><Button type="submit" disabled={saving}><Save className="h-4 w-4" />{saving ? tr("saving") : tr("save_changes")}</Button></div>
           </form>
         )}
 
